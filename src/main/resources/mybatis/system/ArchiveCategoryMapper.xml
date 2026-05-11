@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.project.system.titansort.mapper.ArchiveCategoryMapper">
+
+    <resultMap type="ArchiveCategory" id="ArchiveCategoryResult">
+        <result property="categoryId"    column="category_id"    />
+        <result property="unitId"        column="unit_id"        />
+        <result property="parentId"      column="parent_id"      />
+        <result property="ancestors"     column="ancestors"      />
+        <result property="categoryLevel" column="category_level" />
+        <result property="orderNum"      column="order_num"      />
+        <result property="categoryCode"  column="category_code"  />
+        <result property="categoryName"  column="category_name"  />
+        <result property="sortOrder"     column="sort_order"     />
+        <result property="status"        column="status"         />
+        <result property="createBy"      column="create_by"      />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"      column="update_by"      />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"        column="remark"         />
+    </resultMap>
+
+    <sql id="selectArchiveCategoryVo">
+        select category_id, unit_id, parent_id, ancestors, category_level, order_num, category_code, category_name, sort_order, status, create_by, create_time, update_by, update_time, remark
+        from archive_category_tree
+    </sql>
+
+    <select id="selectArchiveCategoryTreeList" parameterType="ArchiveCategory" resultMap="ArchiveCategoryResult">
+        <include refid="selectArchiveCategoryVo"/>
+        <where>
+            <if test="unitId != null and unitId != ''"> and unit_id = #{unitId}</if>
+            <if test="parentId != null "> and parent_id = #{parentId}</if>
+            <if test="categoryLevel != null "> and category_level = #{categoryLevel}</if>
+            <if test="status != null and status != ''"> and status = #{status}</if>
+            <if test="ancestors != null and ancestors != ''"> and ancestors like concat(#{ancestors}, '%')</if>
+        </where>
+        order by sort_order asc, order_num asc
+    </select>
+
+    <select id="selectArchiveCategoryTreeById" parameterType="Long" resultMap="ArchiveCategoryResult">
+        <include refid="selectArchiveCategoryVo"/>
+        where category_id = #{categoryId}
+    </select>
+
+    <insert id="insertArchiveCategoryTree" parameterType="ArchiveCategory" useGeneratedKeys="true" keyProperty="categoryId">
+        insert into archive_category_tree
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="unitId != null and unitId != ''">unit_id,</if>
+            <if test="parentId != null">parent_id,</if>
+            <if test="ancestors != null">ancestors,</if>
+            <if test="categoryLevel != null">category_level,</if>
+            <if test="orderNum != null and orderNum != ''">order_num,</if>
+            <if test="categoryCode != null and categoryCode != ''">category_code,</if>
+            <if test="categoryName != null and categoryName != ''">category_name,</if>
+            <if test="sortOrder != null">sort_order,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="remark != null">remark,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="unitId != null and unitId != ''">#{unitId},</if>
+            <if test="parentId != null">#{parentId},</if>
+            <if test="ancestors != null">#{ancestors},</if>
+            <if test="categoryLevel != null">#{categoryLevel},</if>
+            <if test="orderNum != null and orderNum != ''">#{orderNum},</if>
+            <if test="categoryCode != null and categoryCode != ''">#{categoryCode},</if>
+            <if test="categoryName != null and categoryName != ''">#{categoryName},</if>
+            <if test="sortOrder != null">#{sortOrder},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="remark != null">#{remark},</if>
+        </trim>
+    </insert>
+
+    <update id="updateArchiveCategoryTree" parameterType="ArchiveCategory">
+        update archive_category_tree
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="orderNum != null and orderNum != ''">order_num = #{orderNum},</if>
+            <if test="categoryCode != null and categoryCode != ''">category_code = #{categoryCode},</if>
+            <if test="categoryName != null and categoryName != ''">category_name = #{categoryName},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where category_id = #{categoryId}
+    </update>
+
+    <delete id="deleteArchiveCategoryTreeByIds" parameterType="String">
+        delete from archive_category_tree where category_id in
+        <foreach item="categoryId" collection="array" open="(" separator="," close=")">
+            #{categoryId}
+        </foreach>
+    </delete>
+</mapper>

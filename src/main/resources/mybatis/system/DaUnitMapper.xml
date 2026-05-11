@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.project.system.unit.mapper.DaUnitMapper">
+
+    <resultMap type="DaUnit" id="DaUnitResult">
+        <id     property="unitid"           column="UNITID" />
+        <result property="code"             column="CODE" />
+        <result property="name"             column="NAME" />
+        <result property="description"      column="DESCRIPTION" />
+        <result property="createTime"       column="CREATETIME" />
+        <result property="createBy"         column="CREATEUSER" />
+        <result property="updateTime"       column="MODIFYTIME" />
+        <result property="updateBy"         column="MODIFYUSER" />
+        <result property="qzh"              column="QZH" />
+        <result property="unitcode"         column="UNITCODE" />
+        <result property="unitfullname"     column="UNITFULLNAME" />
+        <result property="isleaf"           column="ISLEAF" />
+        <result property="unittype"         column="UNITTYPE" />
+        <result property="dagcode"          column="DAGCODE" />
+        <result property="ipsection"        column="IPSECTION" />
+        <result property="isrestrict"       column="ISRESTRICT" />
+        <result property="businessunitname" column="BUSINESSUNITNAME" />
+        <result property="levelord" column="LEVELORD" />
+    </resultMap>
+
+    <sql id="selectDaUnitVo">
+        SELECT UNITID, CODE, NAME, DESCRIPTION, CREATETIME, CREATEUSER,
+               MODIFYTIME, MODIFYUSER, QZH, UNITCODE, UNITFULLNAME, ISLEAF,
+               UNITTYPE, DAGCODE, IPSECTION, ISRESTRICT, BUSINESSUNITNAME,LEVELORD
+        FROM T_allUNIT
+    </sql>
+
+    <select id="selectUnitList" parameterType="DaUnit" resultMap="DaUnitResult">
+        <include refid="selectDaUnitVo"/>
+        <where>
+            qzh like 'P%'
+            <if test="name != null and name != ''"> AND NAME LIKE concat(concat('%', #{name}), '%')</if>
+            <if test="qzh != null and qzh != ''"> AND QZH = #{qzh}</if>
+        </where>
+        ORDER BY to_number(LEVELORD) ASC NULLS LAST, qzh ASC
+    </select>
+
+    <select id="selectUnitById" parameterType="String" resultMap="DaUnitResult">
+        <include refid="selectDaUnitVo"/>
+        WHERE UNITID = #{unitid}
+    </select>
+</mapper>

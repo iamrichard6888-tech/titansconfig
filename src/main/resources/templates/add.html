@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>新增模版字段 (本地预览版)</title>
+  <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f3f3f4; padding: 20px; }
+    .ibox-content { background: #fff; padding: 20px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .form-header { border-bottom: 1px solid #e7eaec; padding-bottom: 10px; margin-bottom: 20px; color: #333; }
+    .is-required:before { content: '*'; color: red; margin-right: 4px; }
+    /* 模拟若依的 Toggle Switch 开关样式 */
+    .toggle-switch { position: relative; width: 46px; display: inline-block; vertical-align: middle; cursor: pointer; user-select: none; }
+    .toggle-switch input { display: none; }
+    .toggle-switch span { display: block; height: 24px; background: #e5e5e5; border-radius: 20px; transition: all 0.3s; }
+    .toggle-switch span:after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: #fff; border-radius: 50%; transition: all 0.3s; }
+    .toggle-switch input:checked + span { background: #1ab394; }
+    .toggle-switch input:checked + span:after { left: 24px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="ibox-content">
+    <form class="form-horizontal">
+      <h4 class="form-header h4">基础信息</h4>
+      <div class="row">
+        <div class="col-sm-6">
+          <div class="form-group">
+            <label class="col-sm-4 control-label is-required">字段代号：</label>
+            <div class="col-sm-8">
+              <input name="fieldcode" class="form-control" type="text" value="WG03" required>
+              <span class="help-block"><i class="fa fa-info-circle"></i> WG00用于主键，WG02用于档号</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6">
+          <div class="form-group">
+            <label class="col-sm-4 control-label is-required">字段名称：</label>
+            <div class="col-sm-8">
+              <input name="fieldname" class="form-control" type="text" value="责任者" required>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h4 class="form-header h4">控制属性</h4>
+      <div class="row">
+        <div class="col-sm-6">
+          <div class="form-group">
+            <label class="col-sm-4 control-label">是否列表显示：</label>
+            <div class="col-sm-8">
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span></span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6">
+          <div class="form-group">
+            <label class="col-sm-4 control-label">是否录入：</label>
+            <div class="col-sm-8">
+              <label class="toggle-switch">
+                <input type="checkbox" id="isinput" checked>
+                <span></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="inputControlArea" style="background:#f9f9f9; padding: 15px; border-radius: 4px; border: 1px dashed #ccc;">
+        <h4 class="form-header h4" style="color:#1ab394; border-bottom:1px dashed #1ab394;">录入详细配置 (动态区)</h4>
+        <div class="row">
+          <div class="col-sm-6">
+            <div class="form-group">
+              <label class="col-sm-4 control-label">控件类型：</label>
+              <div class="col-sm-8">
+                <select id="controltype" class="form-control">
+                  <option value="">默认类型</option>
+                  <option value="combox">下拉框</option>
+                  <option value="fenleihao">分类号</option>
+                </select>
+                <span class="help-block"><i class="fa fa-info-circle"></i> 选"分类号"解禁关联字段</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="form-group">
+              <label class="col-sm-4 control-label">关联字段：</label>
+              <div class="col-sm-8">
+                <input id="linkfield" class="form-control" type="text" disabled placeholder="选择分类号后可填写">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-sm-6">
+            <div class="form-group">
+              <label class="col-sm-4 control-label">是否换行显示：</label>
+              <div class="col-sm-8">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="iswhieline">
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="form-group">
+              <label class="col-sm-4 control-label">多行显示行数：</label>
+              <div class="col-sm-8">
+                <input id="textrow" class="form-control" type="number" value="1" disabled>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top: 30px; text-align: center;">
+        <button type="button" class="btn btn-primary"><i class="fa fa-check"></i> 模 拟 保 存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+  $(function() {
+    // 1. 【是否录入】开关动态折叠联动
+    $("#isinput").change(function() {
+      var isChecked = $(this).is(':checked');
+      if(isChecked) {
+        $("#inputControlArea").slideDown(); // 展开区域
+        // 解除内部控件的禁用状态，但重新触发一次子逻辑判断
+        $("#controltype, #iswhieline").prop('disabled', false);
+        $("#controltype").trigger('change');
+        $("#iswhieline").trigger('change');
+      } else {
+        $("#inputControlArea").slideUp(); // 隐藏区域
+        // 为了防止提交脏数据，将内部输入框全部禁用
+        $("#inputControlArea").find('input, select').prop('disabled', true);
+      }
+    });
+
+    // 2. 【控件类型】下拉框联动
+    $("#controltype").change(function(){
+      if($(this).val() == 'fenleihao') {
+        $("#linkfield").prop('disabled', false).attr('placeholder', '请输入关联字段...');
+      } else {
+        $("#linkfield").prop('disabled', true).val('').attr('placeholder', '选择分类号后可填写');
+      }
+    });
+
+    // 3. 【是否换行显示】开关联动
+    $("#iswhieline").change(function() {
+      if($(this).is(':checked')){
+        $("#textrow").prop('disabled', false).val(3); // 默认给3行
+      } else {
+        $("#textrow").prop('disabled', true).val(1);
+      }
+    });
+  });
+</script>
+</body>
+</html>

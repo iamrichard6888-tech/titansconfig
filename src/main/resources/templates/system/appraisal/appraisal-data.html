@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <th:block th:include="include :: header('智能鉴定实时监控')" />
+  <th:block th:include="include :: ztree-css" />
+  <style>
+    /* Apple 全局字体与重置 */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, "PingFang SC", sans-serif;
+      background-color: #f5f5f7; margin: 0; padding: 0; color: #1d1d1f;
+    }
+    .apple-layout { display: flex; height: 100vh; overflow: hidden; }
+
+    /* 左侧单位树 (毛玻璃效果) */
+    .apple-sidebar {
+      width: 260px; background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(0, 0, 0, 0.05);
+      padding: 30px 15px; overflow-y: auto; flex-shrink: 0; z-index: 10;
+    }
+    .sidebar-title { font-size: 13px; font-weight: 600; color: #86868b; text-transform: uppercase; margin-bottom: 15px; padding-left: 10px;}
+
+    /* 右侧主内容区 */
+    .apple-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+    /* 顶部悬浮操作头 */
+    .apple-header {
+      padding: 30px 40px 20px 40px; background: rgba(245, 245, 247, 0.85);
+      backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+      border-bottom: 1px solid rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 20;
+      display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .large-title { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; margin: 0 0 5px 0; }
+    .sub-title { font-size: 14px; color: #86868b; margin: 0; }
+
+    /* 实时脉冲动画 (Live 状态灯) */
+    .live-indicator { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #ff3b30; background: #ffeceb; padding: 6px 12px; border-radius: 12px;}
+    .pulse-dot { width: 8px; height: 8px; background-color: #ff3b30; border-radius: 50%; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(255, 59, 48, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); } }
+
+    /* 内容滚动区 */
+    .content-scroll-area { flex: 1; overflow-y: auto; padding: 20px 40px 40px 40px; scroll-behavior: smooth; }
+
+    /* Apple 风格流式卡片 */
+    .feed-card {
+      background: #fff; border-radius: 18px; padding: 24px; margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.03); cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid transparent;
+    }
+    .feed-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.06); border-color: #e5e5ea; }
+
+    /* 卡片头部信息 */
+    .card-header-info { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .meta-info { font-size: 13px; color: #86868b; font-weight: 500; display: flex; gap: 15px; }
+    .meta-info span i { margin-right: 4px; }
+    .time-cost { font-size: 12px; font-weight: 600; color: #007aff; background: #e5f0ff; padding: 3px 8px; border-radius: 6px; }
+
+    .card-title { font-size: 18px; font-weight: 600; color: #1d1d1f; margin-bottom: 8px; line-height: 1.4;}
+    .card-summary { font-size: 14px; color: #515154; line-height: 1.5; margin-bottom: 16px; background: #fbfbfd; padding: 12px; border-radius: 10px;}
+
+    /* Top 3 标签组 */
+    .top3-container { display: flex; gap: 10px; align-items: center; flex-wrap: wrap;}
+    .top-label { font-size: 12px; color: #86868b; margin-right: 5px; }
+    .apple-badge { padding: 5px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+    .badge-1 { background: #ebf9ee; color: #34c759; border: 1px solid rgba(52, 199, 89, 0.2);} /* 命中最高 */
+    .badge-2 { background: #fff5e5; color: #ff9500; border: 1px solid rgba(255, 149, 0, 0.2);}
+    .badge-3 { background: #f2f2f7; color: #8e8e93; border: 1px solid rgba(142, 142, 147, 0.2);}
+
+    /* 推理链时间轴 (默认隐藏，点击展开) */
+    .reasoning-chain {
+      margin-top: 20px; padding-top: 20px; border-top: 1px dashed #e5e5ea;
+      display: none; /* 初始隐藏 */
+    }
+    .chain-title { font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 15px; }
+    .timeline { border-left: 2px solid #e5e5ea; margin-left: 8px; padding-left: 20px; list-style: none; }
+    .timeline li { position: relative; margin-bottom: 16px; font-size: 13px; color: #515154; line-height: 1.5;}
+    .timeline li:last-child { margin-bottom: 0; }
+
+    /* 时间轴节点圆圈 */
+    .timeline li::before {
+      content: ''; position: absolute; left: -26px; top: 4px; width: 10px; height: 10px;
+      border-radius: 50%; background: #fff; border: 2px solid #d2d2d7; box-sizing: border-box;
+    }
+    /* 大模型/最终节点高亮 */
+    .timeline li.step-llm::before { border-color: #5e5ce6; background: #e5e4ff; }
+    .timeline li.step-final::before { border-color: #34c759; background: #ebf9ee; }
+
+    .step-label { font-weight: 600; color: #1d1d1f; margin-right: 5px; }
+    .highlight-text { color: #007aff; font-weight: 500; }
+  </style>
+</head>
+<body>
+<div class="apple-layout">
+
+  <div class="apple-sidebar">
+    <div class="sidebar-title">全局监控视图</div>
+    <div id="tree" class="ztree" style="background:transparent; border:none;"></div>
+  </div>
+
+  <div class="apple-main">
+    <div class="apple-header">
+      <div>
+        <h1 class="large-title" id="curUnitTitle">全部监控单位</h1>
+        <p class="sub-title">正在监听全区档案系统的 AI 鉴定流...</p>
+      </div>
+      <div class="live-indicator">
+        <div class="pulse-dot"></div> Live
+      </div>
+    </div>
+
+    <div class="content-scroll-area" id="feedContainer">
+
+      <div class="feed-card" data-unit="区委办" onclick="toggleChain(this)">
+        <div class="card-header-info">
+          <div class="meta-info">
+            <span><i class="fa fa-building-o"></i> 区委办</span>
+            <span><i class="fa fa-archive"></i> 全宗号: P084</span>
+          </div>
+          <div class="time-cost"><i class="fa fa-bolt"></i> 1.24s</div>
+        </div>
+        <div class="card-title">关于召开2026年档案工作会议的通知</div>
+        <div class="card-summary">安排全区档案会议日程及参会人员要求，要求各单位按时提交年度总结材料。</div>
+
+        <div class="top3-container">
+          <span class="top-label">AI 建议排序：</span>
+          <div class="apple-badge badge-1">10年 <small>98%</small></div>
+          <div class="apple-badge badge-2">30年 <small>15%</small></div>
+          <div class="apple-badge badge-3">永久 <small>2%</small></div>
+        </div>
+
+        <div class="reasoning-chain">
+          <div class="chain-title"><i class="fa fa-code-fork"></i> 完整出结果链 (点击收起)</div>
+          <ul class="timeline">
+            <li><span class="step-label">1. 基础解析：</span> 正则引擎提取文种特征为 <span class="highlight-text">[通知]</span></li>
+            <li><span class="step-label">2. 语义检索：</span> 向量数据库 (Milvus) 匹配核心事由为 <span class="highlight-text">[会议事务]</span></li>
+            <li class="step-llm"><span class="step-label">3. 大模型校验：</span> Qwen-14B 深度验证上下文，确认非核心决策会议</li>
+            <li class="step-final"><span class="step-label">4. 终局匹配：</span> 成功命中本单位规则库 <span class="highlight-text">WS-1.2条款 (一般性会议通知)</span> -> 输出 10年</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="feed-card" data-unit="区财政局" onclick="toggleChain(this)">
+        <div class="card-header-info">
+          <div class="meta-info">
+            <span><i class="fa fa-building-o"></i> 区财政局</span>
+            <span><i class="fa fa-archive"></i> 全宗号: P102</span>
+          </div>
+          <div class="time-cost"><i class="fa fa-bolt"></i> 0.85s</div>
+        </div>
+        <div class="card-title">2025年度黄埔区财政决算报告及审计意见</div>
+        <div class="card-summary">汇总2025全年各部门财政收支决算数据，并附带市审计局的最终反馈意见。</div>
+
+        <div class="top3-container">
+          <span class="top-label">AI 建议排序：</span>
+          <div class="apple-badge badge-1" style="color:#ff3b30; background:#ffeceb; border-color:rgba(255,59,48,0.2);">永久 <small>99%</small></div>
+          <div class="apple-badge badge-2">30年 <small>5%</small></div>
+          <div class="apple-badge badge-3">10年 <small>1%</small></div>
+        </div>
+
+        <div class="reasoning-chain">
+          <div class="chain-title"><i class="fa fa-code-fork"></i> 完整出结果链 (点击收起)</div>
+          <ul class="timeline">
+            <li><span class="step-label">1. 基础解析：</span> 正则引擎提取文种特征为 <span class="highlight-text">[报告]</span>，关键词命中 <span class="highlight-text">[决算, 审计]</span></li>
+            <li class="step-final"><span class="step-label">2. 规则直达：</span> 置信度极高，直接命中核心财务规则库 <span class="highlight-text">KU-5.1条款 (年度决算报告)</span> -> 输出 永久</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="feed-card" data-unit="区教育局" onclick="toggleChain(this)">
+        <div class="card-header-info">
+          <div class="meta-info">
+            <span><i class="fa fa-building-o"></i> 区教育局</span>
+            <span><i class="fa fa-archive"></i> 全宗号: P045</span>
+          </div>
+          <div class="time-cost" style="color:#ff9500; background:#fff5e5;"><i class="fa fa-bolt"></i> 2.15s (模型耗时)</div>
+        </div>
+        <div class="card-title">关于张三等五名同志工作岗位调整的内部决定</div>
+        <div class="card-summary">涉及区教育局下属中小学5名校长级别干部的职务调动确认及交接说明。</div>
+
+        <div class="top3-container">
+          <span class="top-label">AI 建议排序：</span>
+          <div class="apple-badge badge-1" style="color:#ff3b30; background:#ffeceb; border-color:rgba(255,59,48,0.2);">永久 <small>92%</small></div>
+          <div class="apple-badge badge-2">30年 <small>35%</small></div>
+          <div class="apple-badge badge-3">10年 <small>5%</small></div>
+        </div>
+
+        <div class="reasoning-chain">
+          <div class="chain-title"><i class="fa fa-code-fork"></i> 完整出结果链 (点击收起)</div>
+          <ul class="timeline">
+            <li><span class="step-label">1. 基础解析：</span> 题名不规范，未完全命中正则库标准文种。</li>
+            <li class="step-llm"><span class="step-label">2. 大模型兜底：</span> 触发 Qwen-14B 推理，提取隐含意图为 <span class="highlight-text">[人事任免]</span> 和 <span class="highlight-text">[决定]</span></li>
+            <li class="step-final"><span class="step-label">3. 终局匹配：</span> 匹配人事档案规则库 <span class="highlight-text">RS-2.4条款 (干部任免决定)</span> -> 输出 永久</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<th:block th:include="include :: footer" />
+<th:block th:include="include :: ztree-js" />
+
+<script th:inline="javascript">
+  $(function() {
+    // 1. 初始化左侧单位树
+    var zNodes = [
+      { id:0, pId:-1, name:"全部监控单位", open:true, iconSkin:"pIcon01" },
+      { id:1, pId:0, name:"黄埔区国家档案馆" },
+      { id:2, pId:0, name:"区委办" },
+      { id:3, pId:0, name:"区财政局" },
+      { id:4, pId:0, name:"区教育局" }
+    ];
+
+    var setting = {
+      view: { showLine: false, selectedMulti: false },
+      callback: {
+        onClick: function(e, id, node) {
+          // 更新大标题
+          $("#curUnitTitle").fadeOut(150, function() {
+            $(this).text(node.name).fadeIn(150);
+          });
+
+          // 过滤中间的数据流
+          if(node.id === 0) {
+            $(".feed-card").fadeIn(300); // 选全部时显示所有
+          } else {
+            $(".feed-card").hide();
+            // 通过 data-unit 属性精确匹配并显示
+            $(".feed-card[data-unit='"+node.name+"']").fadeIn(300);
+          }
+        }
+      }
+    };
+    $.fn.zTree.init($("#tree"), setting, zNodes);
+  });
+
+  // 2. 点击卡片展开/收起“推理链”
+  function toggleChain(element) {
+    // 找到当前卡片内部的 reasoning-chain 容器
+    var chainDiv = $(element).find(".reasoning-chain");
+
+    // 使用 jQuery 的 slideToggle 实现丝滑的展开/折叠动画
+    chainDiv.slideToggle(250);
+
+    // 可选：高亮当前点击的卡片
+    $(".feed-card").css("border-color", "transparent");
+    if(chainDiv.is(":hidden")) {
+      $(element).css("border-color", "#e5e5ea");
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:include="include :: header('数据确认单预览')" />
+    <style>
+        /* 增加一些打印和预览的排版样式 */
+        .confirm-header { text-align: center; margin-bottom: 20px; }
+        .confirm-meta { font-size: 16px; font-weight: bold; margin-bottom: 10px; padding: 0 10px; text-align: left;}
+        .confirm-footer { margin-top: 40px; display: flex; justify-content: space-between; font-size: 16px; padding: 0 50px; line-height: 2; }
+        /* 让表格边框更清晰，类似Excel */
+        .table-bordered > tbody > tr > td, .table-bordered > thead > tr > th { border: 1px solid #333 !important; }
+        /* 解决若依 Bootstrap Table 表头无法换行的问题 */
+        .bootstrap-table .table thead th .th-inner {
+            white-space: normal !important;  /* 允许文字换行 */
+            line-height: 1.5;                /* 稍微拉开一点行距，看起来更像原件 */
+            padding: 8px;                    /* 增加一点内边距，避免文字贴边 */
+        }
+    </style>
+</head>
+<body class="gray-bg">
+<div class="container-div">
+    <div class="row">
+        <form id="formId">
+            <input type="hidden" name="unitid" th:value="${unitid}">
+        </form>
+
+<!--        <div class="btn-group-sm" id="toolbar" role="group">
+            <a class="btn btn-warning" onclick="$.table.exportExcel()">
+                <i class="fa fa-download"></i> 导出Excel
+            </a>
+        </div>-->
+
+        <div class="col-sm-12 select-table table-bordered" style="background: #fff; padding: 30px; border-radius: 8px;">
+
+            <div class="confirm-header">
+                <h2 style="font-weight: bold; letter-spacing: 2px;" >[[${unitfullname}]]数字档案室系统非声像数据迁移确认表</h2>
+            </div>
+            <div class="confirm-meta">
+                <span id="dynamicFondsNo">全宗号：[[${qzh}]]</span>
+                <span id="dynamicUnitName" style="margin-left: 40px;">单位名称：[[${unitfullname}]]</span>
+            </div>
+
+            <table id="bootstrap-table"></table>
+
+            <div class="confirm-footer">
+                <div>
+                    <p>经办人（签名）：</p>
+                    <p style="margin-top: 50px;">分管领导（签名）：</p>
+                    <p style="margin-top: 20px; text-align: center;">年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;月&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;日</p>
+                </div>
+                <div>
+                    <p>单&nbsp;&nbsp;&nbsp;&nbsp;位（盖章）：</p>
+                    <p style="margin-top: 100px;">联系电话：</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<th:block th:include="include :: footer" />
+<script th:inline="javascript">
+    var prefix = ctx + "tool/download";
+
+        $(function() {
+            var options = {
+                url: prefix + "/checkListData",
+                exportUrl: prefix + "/exportCheckList",
+                modalName: "数据确认单",
+                showSearch: false,
+                showRefresh: false,
+                showToggle: false,
+                showColumns: false,
+                pagination: false,
+                escape: false,
+                // 数据加载成功后，执行单元格合并
+                onLoadSuccess: function(data) {
+                    // 调用合并行函数，分别合并新旧功能模块相同的相邻行
+                    mergeTableCells(data.rows, "oldSysFunction", '#bootstrap-table');
+                    mergeTableCells(data.rows, "newSysFunction", '#bootstrap-table');
+                },
+                // 核心修改：使用二维数组实现多级表头
+                columns: [
+                    [
+                        { field: 'serial', title: '序号', align: 'center', valign: 'middle', rowspan: 2, width: '50' },
+                        {   title: '原黄埔数字档案室服务平台系统数据<br>（https://172.23.237.3:8443/titansbsse/）<br>仅列出有条目数据的版块和栏目清单',
+                            align: 'center',
+                            valign: 'middle',
+                            colspan: 4},
+                        { title: '迁移至新黄埔数字档案室服务平台数据<br/>（https://hpszdas.hp.gov.cn/）',
+                            align: 'center',
+                            valign: 'middle',
+                            colspan: 4},
+                        { field: 'remark', title: '备注', align: 'center', valign: 'middle', rowspan: 2 }
+                    ],
+                    [
+                        { field: 'oldSysFunction', title: '功能模块', align: 'center', valign: 'middle', width: '200' },
+                        { field: 'oldSysSort', title: '分类', align: 'center', valign: 'middle' },
+                        { field: 'oldSysDataValues', title: '目录数据量', align: 'center', valign: 'middle', width: '80' },
+                        { field: 'oldSysFileValues', title: '电子文件数据量', align: 'center', valign: 'middle', width: '80' },
+                        { field: 'newSysFunction', title: '功能模块', align: 'center', valign: 'middle', width: '200' },
+                        { field: 'newSysSort', title: '分类', align: 'center', valign: 'middle' },
+                        { field: 'newSysDataValues', title: '目录数据量', align: 'center', valign: 'middle', width: '80' },
+                        { field: 'newSysFileValues', title: '电子文件数据量', align: 'center', valign: 'middle', width: '80' }
+                    ]
+                ]
+            };
+            $.table.init(options);
+        });
+
+    /**
+     * 动态合并相邻内容相同的单元格
+     * @param data 表格数据行数组
+     * @param fieldName 需要判断并合并的字段名
+     * @param target table的DOM选择器
+     */
+    function mergeTableCells(data, fieldName, target) {
+        if (!data || data.length === 0) return;
+
+        var rowspan = 1;
+        var startIndex = 0;
+
+        for (var i = 1; i < data.length; i++) {
+            // 比较当前行和上一行的指定字段是否相同
+            if (data[i][fieldName] === data[i - 1][fieldName]) {
+                rowspan++;
+            } else {
+                // 如果不同且之前有相同的，则执行合并
+                if (rowspan > 1) {
+                    $(target).bootstrapTable('mergeCells', {
+                        index: startIndex,
+                        field: fieldName,
+                        rowspan: rowspan
+                    });
+                }
+                startIndex = i;
+                rowspan = 1;
+            }
+        }
+        // 处理最后一组数据
+        if (rowspan > 1) {
+            $(target).bootstrapTable('mergeCells', {
+                index: startIndex,
+                field: fieldName,
+                rowspan: rowspan
+            });
+        }
+    }
+</script>
+</body>
+</html>

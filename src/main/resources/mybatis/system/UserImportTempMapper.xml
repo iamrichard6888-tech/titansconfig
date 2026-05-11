@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.project.system.userconfig.mapper.UserImportTempMapper">
+
+    <select id="selectTempList" resultType="com.ruoyi.project.system.userconfig.domain.UserImportTemp">
+        SELECT ID as id, ORGAN_QZH as organQzh, LOGIN_ACCOUNT as loginAccount, USER_NAME as userName,
+        MOBILE_PHONE as mobilePhone, DEPT_NAME as deptName, USER_TYPE as userType,
+        DESCRIPTION as description, SOURCE as source, STATUS as status, ERROR_MSG as errorMsg
+        FROM T_S_USER_IMPORT_TEMP
+        <where>
+            <if test="loginAccount != null and loginAccount != ''">
+                AND LOGIN_ACCOUNT LIKE '%' || #{loginAccount} || '%'
+            </if>
+            <if test="userName != null and userName != ''">
+                AND USER_NAME LIKE '%' || #{userName} || '%'
+            </if>
+            <if test="status != null and status != ''">
+                AND STATUS = #{status}
+            </if>
+        </where>
+        ORDER BY CREATE_TIME DESC
+    </select>
+
+    <insert id="insertUserImportTemp" parameterType="com.ruoyi.project.system.userconfig.domain.UserImportTemp">
+        INSERT INTO T_S_USER_IMPORT_TEMP(
+            ID, ORGAN_QZH, LOGIN_ACCOUNT, USER_NAME, MOBILE_PHONE, DEPT_NAME,
+            USER_TYPE, DESCRIPTION, SOURCE, STATUS, ERROR_MSG, PERSON_TYPE, POST_NAME, CREATE_TIME
+        ) VALUES (
+                     #{id}, #{organQzh}, #{loginAccount}, #{userName}, #{mobilePhone}, #{deptName},
+                     #{userType}, #{description}, #{source}, #{status}, #{errorMsg}, #{personType}, #{postName}, sysdate
+                 )
+    </insert>
+
+    <select id="selectPendingList" resultType="com.ruoyi.project.system.userconfig.domain.UserImportTemp">
+        SELECT ID as id, ORGAN_QZH as organQzh, LOGIN_ACCOUNT as loginAccount, USER_NAME as userName,
+               MOBILE_PHONE as mobilePhone, DEPT_NAME as deptName, USER_TYPE as userType,
+               DESCRIPTION as description, SOURCE as source, STATUS as status, ERROR_MSG as errorMsg,PERSON_TYPE as personType
+        FROM T_S_USER_IMPORT_TEMP WHERE STATUS = '0'
+    </select>
+
+    <select id="selectOrganIdByQzh" resultType="String">
+        SELECT ORGANID FROM T_S_ORGAN WHERE code = #{qzh} AND ROWNUM = 1
+    </select>
+
+    <select id="countUserByCode" resultType="int">
+        SELECT count(1) FROM T_S_USER WHERE CODE = #{code}
+    </select>
+
+    <select id="selectRoleIdByCode" resultType="String">
+        SELECT ROLEID FROM T_S_ROLE WHERE CODE = #{code} AND ROWNUM = 1
+    </select>
+
+    <insert id="insertTsUser" parameterType="java.util.Map">
+        INSERT INTO T_S_USER(USERID, CODE, NAME, PWD, STATUS, USERTYPE,CREATETIME,ENABLESTATUS,DESCRIPTION,PHONE,DEPARTMENT)
+        VALUES (#{userId}, #{code}, #{name}, #{pwd}, '已激活', #{usertype},sysdate,'启用',#{description},#{phone},#{department})
+    </insert>
+
+    <insert id="insertTsUo" parameterType="java.util.Map">
+        INSERT INTO T_S_UO(USERID, ORGANID, RELTYPE) VALUES (#{userId}, #{organId}, '1')
+    </insert>
+
+    <insert id="insertTsUr" parameterType="java.util.Map">
+        INSERT INTO T_S_UR(USERID, ROLEID) VALUES (#{userId}, #{roleId})
+    </insert>
+
+    <update id="updateTempStatus">
+        UPDATE T_S_USER_IMPORT_TEMP SET STATUS = #{status}, ERROR_MSG = #{errorMsg} WHERE ID = #{id}
+    </update>
+
+    <select id="selectUserImportTempById" resultType="com.ruoyi.project.system.userconfig.domain.UserImportTemp">
+        SELECT ID as id, ORGAN_QZH as organQzh, LOGIN_ACCOUNT as loginAccount, USER_NAME as userName,
+               MOBILE_PHONE as mobilePhone, DEPT_NAME as deptName, USER_TYPE as userType,
+               DESCRIPTION as description, SOURCE as source, STATUS as status, ERROR_MSG as errorMsg,PERSON_TYPE as personType
+        FROM T_S_USER_IMPORT_TEMP
+        WHERE ID = #{id}
+    </select>
+
+    <update id="updateUserImportTemp" parameterType="com.ruoyi.project.system.userconfig.domain.UserImportTemp">
+        UPDATE T_S_USER_IMPORT_TEMP
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="loginAccount != null">LOGIN_ACCOUNT = #{loginAccount},</if>
+            <if test="userName != null">USER_NAME = #{userName},</if>
+            <if test="mobilePhone != null">MOBILE_PHONE = #{mobilePhone},</if>
+            <if test="deptName != null">DEPT_NAME = #{deptName},</if>
+            <if test="userType != null">USER_TYPE = #{userType},</if>
+            <if test="description != null">DESCRIPTION = #{description},</if>
+            <if test="status != null">STATUS = #{status},</if>
+            <if test="errorMsg != null">ERROR_MSG = #{errorMsg},</if>
+            <if test="organQzh != null">ORGAN_QZH = #{organQzh},</if>
+        </trim>
+        WHERE ID = #{id}
+    </update>
+
+    <delete id="deleteUserImportTempByIds">
+        DELETE FROM T_S_USER_IMPORT_TEMP WHERE ID IN
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <select id="selectOrganList" resultType="java.util.Map">
+        SELECT a.code as "qzh", a.NAME as "organname"
+        FROM T_S_ORGAN a left join T_S_ORGANLEVEL b on a.organid = b.organid
+        WHERE a.code IS NOT NULL and exists(select 1 from T_S_ORGAN c where b.parentid = c.organid and c.code = 'LDDW')
+        ORDER BY a.code ASC
+    </select>
+    <select id="countTempByAccount" resultType="int">
+        SELECT count(1) FROM T_S_USER_IMPORT_TEMP WHERE LOGIN_ACCOUNT = #{loginAccount}
+    </select>
+    <select id="selectTempByAccount" resultType="com.ruoyi.project.system.userconfig.domain.UserImportTemp">
+        SELECT * FROM T_S_USER_IMPORT_TEMP WHERE LOGIN_ACCOUNT = #{loginAccount}
+    </select>
+
+    <select id="checkRoleExists" resultType="String">
+        SELECT ROLEID FROM T_S_ROLE
+        WHERE CODE = #{roleCode} AND UNITID = #{unitId} AND ROWNUM = 1
+    </select>
+
+    <select id="selectTemplateRole" resultType="java.util.Map">
+        SELECT ROLEID, CODE, NAME, DESCRIPTION
+        FROM T_S_ROLE
+        WHERE CODE = #{roleCode} AND UNITID IS NULL AND ROWNUM = 1
+    </select>
+
+    <insert id="insertTsRole" parameterType="java.util.Map">
+        INSERT INTO T_S_ROLE(ROLEID, CODE, NAME, DESCRIPTION, CREATETIME, UNITID)
+        VALUES (#{roleId}, #{code}, #{name}, #{description}, sysdate, #{unitId})
+    </insert>
+
+    <insert id="cloneRolePrivileges">
+        INSERT INTO T_S_RP (ROLEID, PRIVILEGEID)
+        SELECT #{newRoleId}, PRIVILEGEID FROM T_S_RP
+        WHERE ROLEID = #{templateRoleId}
+          AND PRIVILEGEID NOT IN ('C9612BA9318BFF034B6AF6C452A9FDF2', '8108DC96C90E27872FFEB06418A8C5A7', 'B07CB1BDCDA2C39AC2EF8E3CBE042F5B', '7A83D778858083A1AFA41072C468EC31')
+          AND PRIVILEGEID NOT IN (
+            SELECT PRIVILEGEID FROM T_S_PRIVILEGE
+            WHERE PRODUCTID IN (
+                SELECT PRODUCTID FROM T_S_PRODUCT WHERE NAME IN ('档案馆档案管理系统', '监督指导系统（档案局）', '档案利用平台')
+            )
+        )
+    </insert>
+
+    <insert id="insertTsRp">
+        INSERT INTO T_S_RP (ROLEID, PRIVILEGEID) VALUES (#{roleId}, #{privilegeId})
+    </insert>
+
+    <select id="selectOrganInfoByQzh" resultType="java.util.Map">
+        SELECT * FROM T_S_ORGAN WHERE code = #{qzh} AND ROWNUM = 1
+    </select>
+
+
+</mapper>

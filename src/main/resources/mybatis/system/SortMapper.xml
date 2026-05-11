@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.project.system.sort.mapper.SortMapper">
+
+	<resultMap type="Sort" id="SortResult">
+		<id     property="id"     column="id"     />
+		<result property="parentId"   column="parent_id"   />
+		<result property="groupName"   column="group_name"   />
+		<result property="code"   column="code"   />
+		<result property="showOrder"     column="show_order"      />
+		<result property="level"      column="level"       />
+		<result property="tableName"      column="table_name"       />
+		<result property="tableId"      column="table_id"       />
+	</resultMap>
+	
+
+    
+	
+	<select id="selectSortList" parameterType="Sort" resultMap="SortResult">
+        <include refid="selectSortVo"/>
+        where 1=1
+		<if test="id != null and id != '1'.toString()">
+			AND id = #{id,jdbcType=VARCHAR}
+		</if>
+        <if test="parentId != null and parentId != '0'.toString()">
+			AND parent_id = #{parentId}
+		</if>
+		<if test="groupName != null and groupName != ''">
+			AND group_name like concat('%', #{groupName}, '%')
+		</if>
+		<!-- 数据范围过滤 -->
+		order by  d.show_order
+    </select>
+	
+	<sql id="selectSortVo">
+        select d.id, d.parent_id, d.code, d.group_name, d.show_order, d."LEVEL", d.table_name, d.table_id 
+        from sys_sort d
+    </sql>
+    
+    <select id="selectUnitVo" parameterType="Sort" resultMap="SortResult">
+        <!-- SELECT id AS ID ,'1' AS PARENT_ID ,unitfullname AS GROUP_NAME,QZH  AS CODE ,LEVELORD  AS SHOW_ORDER,'1' AS "LEVEL",'UNITID' AS TABLE_NAME,id AS TABLE_ID FROM V_UNIT ORDER BY LEVELORD -->
+        SELECT ID,PARENT_ID,GROUP_NAME,CODE,ROWNUM  AS SHOW_ORDER,"LEVEL",TABLE_NAME,TABLE_ID FROM (
+			SELECT UNITID AS ID ,'1' AS PARENT_ID ,unitfullname AS GROUP_NAME,QZH  AS CODE ,'1' AS "LEVEL",'UNITID' AS TABLE_NAME,UNITID AS TABLE_ID FROM T_ALLUNIT ORDER BY QZH
+		)t
+    </select>
+    
+    <select id="selectStrutstypeVo" parameterType="Sort" resultMap="SortResult">
+        SELECT ID,#{id} AS PARENT_ID,STRUTSTYPE AS CODE ,STRUTSNAME AS GROUP_NAME ,"SEQUENCE"  AS SHOW_ORDER,'2' AS "LEVEL",'STRUTSTYPE' AS TABLE_NAME,STRUTSTYPE AS TABLE_ID FROM T_DA_STRUTSTYPE
+    </select>
+
+	<select id="selectCarriertypeVo" parameterType="Sort" resultMap="SortResult">
+        SELECT ID,#{id} AS PARENT_ID,CARRIERTYPE AS CODE ,CARRIERTYPENAME AS GROUP_NAME ,ROWNUM  AS SHOW_ORDER,'3' AS "LEVEL",'CARRIERTYPE' AS TABLE_NAME,CARRIERTYPE AS TABLE_ID FROM T_DA_CARRIERTYPE
+    </select>
+    
+    <select id="selectExtsortVo" parameterType="Sort" resultMap="SortResult">
+        SELECT ID,'4' AS PARENT_ID,sortcode AS CODE ,SORTNAME AS GROUP_NAME ,ROWNUM  AS SHOW_ORDER,'4' AS "LEVEL",'SORTID' AS TABLE_NAME,SORTID AS TABLE_ID FROM T_DA_EXTSORT 
+        WHERE  STRUTSTYPE =#{code} AND CARRIERTYPE =#{tableName} AND UNITID =#{tableId} ORDER BY SORTCODE ,"SEQUENCE"
+    </select>
+
+	<!-- <insert id="insertSort" parameterType="Sort">
+		insert into sys_sort(
+		<if test="id != null and id != ''">id,</if>
+		<if test="parentId != null and parentId != ''">parent_id,</if>
+		<if test="groupName != null and groupName != ''">group_name,</if>
+		<if test="code != null and code != ''">code,</if>
+		<if test="showOrder != null and showOrder != ''">show_order,</if>
+		<if test="level != null and level != ''">level,</if>
+		<if test="tableName !=null and tableName != ''">table_name,</if>
+		<if test="tableId != null and tableId != ''">table_id,</if>
+		)values(
+		<if test="id != null and id != ''">#{id},</if>
+		<if test="parentId != null and parentId != ''">#{parentId},</if>
+		<if test="groupName != null and groupName != ''">#{groupName},</if>
+		<if test="code != null and code != ''">#{code},</if>
+		<if test="showOrder != null and showOrder != ''">#{showOrder},</if>
+		<if test="level != null and level != ''">#{level},</if>
+		<if test="tableName !=null and tableName != ''">#{tableName},</if>
+		<if test="tableId != null and tableId != ''">#{tableId},</if>
+		)
+	</insert> -->
+	
+	<insert id="insertSort" parameterType="Sort">
+		INSERT INTO SYS_SORT (ID, PARENT_ID, CODE, GROUP_NAME, SHOW_ORDER, "LEVEL", TABLE_NAME, TABLE_ID) 
+		VALUES(#{id}, #{parentId}, #{code}, #{groupName}, #{showOrder}, #{level}, #{tableName}, #{tableId})
+	</insert>
+</mapper> 

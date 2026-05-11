@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <th:block th:include="include :: header('数据确认单预览')" />
+</head>
+<body class="gray-bg">
+<div class="container-div">
+  <div class="row">
+
+    <div class="col-sm-12 select-table table-striped">
+      <form id="user-form">
+        <div class="select-list">
+          <ul>
+            <li>
+              全宗号：<input type="text" name="qzh"/>
+            </li>
+            <li>
+              全宗名称：<input type="text" name="unitfullname"/>
+            </li>
+            <li>
+              <a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+              <a class="btn btn-warning btn-rounded btn-sm" onclick="resetPre()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
+            </li>
+          </ul>
+        </div>
+      </form>
+      <table id="bootstrap-table"></table>
+    </div>
+  </div>
+</div>
+
+<th:block th:include="include :: footer" />
+<script th:inline="javascript">
+  var prefix = ctx + "tool/download";
+
+  $(function() {
+    var options = {
+      url: prefix + "/getMigrationProgress",       // 1. 去哪里要预览的数据？
+      modalName: "数据迁移进度",
+      showRefresh: false,  // 隐藏刷新按钮
+      showToggle: false,   // 隐藏视图切换
+      pagination: false,   // 确认单通常一页显示完毕，关掉分页
+      showSearch : true,
+      columns: [
+        { field: 'unitid', title: 'unitid',visible:false},
+        { field: 'qzh', title: '全宗号' },
+        // 这个字段可以是数据库没有，后端自己加工出来的
+        { field: 'unitfullname', title: '全宗名称',width: 300},
+        { field: 'currentData', title: '已迁数据量' ,align:'center',sortable:true},
+        { field: 'totalData', title: '总数据量' ,align:'center',sortable:true},
+        { field: 'progress',
+          title: '进度',
+          align:'center',
+          sortable:true,
+          width: 150,
+          formatter: function (value, row, index) {
+            return progressGraph(row);
+          }}
+      ]
+    };
+    $.table.init(options);
+  });
+  function progressGraph(row){
+    let percent = row.progress || 0;
+    return `<div style="display: flex; align-items: center; width: 100%;">
+            <!-- 进度条区域：flex:1 占据剩余空间 -->
+            <div style="width: 80%; flex: 1; height: 8px; background-color: #ebeef5; border-radius: 4px;">
+              <div style="width: ${percent}%; height: 8px; background-color: #409EFF; border-radius: 4px;"></div>
+            </div>
+            <!-- 数字区域：固定宽度 45px，保证始终一致 -->
+            <span style="width: 20%; font-size: 12px; text-align: right; margin-left: 4px;">${percent}%</span>
+          </div>`;
+  }
+
+  function resetPre() {
+    resetDate();
+    $("#user-form")[0].reset();
+    $.table.search();
+  }
+
+</script>
+</body>
+</html>

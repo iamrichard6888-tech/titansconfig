@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:include="include :: header('智能导入解析')" />
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; background-color: #fff; color: #1d1d1f; }
+        .wrapper { padding: 40px; }
+
+        /* 苹果风拖拽上传区 */
+        .upload-area {
+            border: 2px dashed #d2d2d7; border-radius: 18px; padding: 50px 20px;
+            text-align: center; transition: all 0.3s; background: #fbfbfd; cursor: pointer;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #007aff; background: #f0f8ff; transform: scale(1.02);
+        }
+        .upload-area i { font-size: 64px; color: #007aff; margin-bottom: 20px; opacity: 0.8; }
+        .upload-area h3 { font-size: 20px; font-weight: 600; margin-bottom: 10px; }
+        .upload-area p { color: #86868b; font-size: 14px; }
+
+        /* 极客风解析日志终端 */
+        .terminal-log {
+            background: #1e1e1e; color: #34c759; border-radius: 12px; padding: 20px;
+            font-family: "SF Mono", Consolas, monospace; font-size: 13px;
+            height: 220px; overflow-y: auto; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            line-height: 1.6;
+        }
+        .terminal-log .log-err { color: #ff3b30; }
+        .terminal-log .log-warn { color: #ff9500; }
+        .terminal-log .log-info { color: #5ac8fa; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <input type="hidden" id="unitId" th:value="${unitId}">
+
+    <div class="upload-area" id="drop-zone">
+        <i class="fa fa-cloud-upload"></i>
+        <h3>点击或拖拽《三合一制度》文件至此</h3>
+        <p>支持 PDF / DOCX / Excel 格式，系统将启动大模型自动结构化提取</p>
+    </div>
+
+    <input type="file" id="fileInput" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx">
+
+    <div class="terminal-log" id="parseLog">
+        <div><span class="log-info">[System]</span> AI Parsing Engine Initialized...</div>
+    </div>
+</div>
+
+<th:block th:include="include :: footer" />
+<script th:inline="javascript">
+    // 若依标准全局路径
+    var ctx = [[@{/}]];
+
+        // 【修复2】：包裹在 $() 中，确保页面元素全部加载完毕后再绑定事件
+        $(function() {
+
+            // ================= 1. 点击上传逻辑 =================
+            $("#drop-zone").on("click", function() {
+                // 【修复3】：加上 [0] 转换为原生 DOM 对象，强制触发真实的点击，突破浏览器安全限制
+                $("#fileInput")[0].click();
+            });
+
+            // 监听文件选择框的值改变
+            $("#fileInput").on("change", function() {
+                var file = this.files[0];
+                if(!file) return;
+                startUploadAndParse(file);
+            });
+
+            // ================= 2. 拖拽上传逻辑 =================
+            var dropZone = document.getElementById('drop-zone');
+
+            // 拖入区域
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation(); // 阻止事件向上冒泡
+                $(this).addClass('dragover');
+            });
+
+            // 拖出区域
+            dropZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(this).removeClass('dragover');
+            });
+
+            // 松手落下文件
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(this).removeClass('dragover');
+
+                var files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    startUploadAndParse(files[0]);
+                }
+            });
+        });
+
+    // ================= 3. 核心请求逻辑 =================
+    function startUploadAndParse(file) {
+        var unitId = $("#unitId").val();
+
+        $("#drop-zone").hide();
+        $("#parseLog").fadeIn();
+        appendLog("正在读取文件流: " + file.name + " (" + (file.size/1024).toFixed(2) + " KB)");
+        appendLog("<span class='log-warn'>[LLM]</span> 正在调用大模型意图识别，启动文档结构化分析...");
+
+        var formData = new FormData();
+        formData.append("file", file);
+        formData.append("unitId", unitId);
+
+        $.ajax({
+            url: ctx + "system/rule/importData",
+            type: 'POST',
+            data: formData,
+            cache: false,
+            contentType: false,
+            processData: false,
+            success: function(result) {
+                if(result.code == 0) {
+                    appendLog("<span class='log-info'>[Success]</span> " + result.msg);
+                    appendLog("数据库同步完成。3秒后自动关闭此窗口...");
+
+                    setTimeout(function(){
+                        parent.loadRuleData(); // 刷新父页面
+                        $.modal.close();       // 关闭弹窗
+                    }, 3000);
+                } else {
+                    appendLog("<span class='log-err'>[Error]</span> " + result.msg);
+                }
+            },
+            error: function() {
+                appendLog("<span class='log-err'>[Fatal]</span> 服务器连接断开，请检查网络！");
+            }
+        });
+    }
+
+    // 打字机日志追加
+    function appendLog(text) {
+        $("#parseLog").append("<div>" + text + "</div>");
+        var logDiv = document.getElementById("parseLog");
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <th:block th:include="include :: header('智能鉴定实时监控')" />
+  <th:block th:include="include :: ztree-css" />
+  <style>
+    /* Apple 全局字体与重置 */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, "PingFang SC", sans-serif;
+      background-color: #f5f5f7; margin: 0; padding: 0; color: #1d1d1f;
+    }
+    .apple-layout { display: flex; height: 100vh; overflow: hidden; }
+
+    /* 左侧单位树 (毛玻璃效果) */
+    .apple-sidebar {
+      width: 260px; background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(0, 0, 0, 0.05);
+      padding: 30px 15px; overflow-y: auto; flex-shrink: 0; z-index: 10;
+    }
+    .sidebar-title { font-size: 13px; font-weight: 600; color: #86868b; text-transform: uppercase; margin-bottom: 15px; padding-left: 10px;}
+
+    /* 右侧主内容区 */
+    .apple-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+    /* 顶部悬浮操作头 */
+    .apple-header {
+      padding: 30px 40px 20px 40px; background: rgba(245, 245, 247, 0.85);
+      backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+      border-bottom: 1px solid rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 20;
+      display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .large-title { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; margin: 0 0 5px 0; }
+    .sub-title { font-size: 14px; color: #86868b; margin: 0; }
+
+    /* 实时脉冲动画 (Live 状态灯) */
+    .live-indicator { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #ff3b30; background: #ffeceb; padding: 6px 12px; border-radius: 12px;}
+    .pulse-dot { width: 8px; height: 8px; background-color: #ff3b30; border-radius: 50%; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(255, 59, 48, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); } }
+
+    /* 内容滚动区 */
+    .content-scroll-area { flex: 1; overflow-y: auto; padding: 20px 40px 40px 40px; scroll-behavior: smooth; }
+
+    /* Apple 风格流式卡片 */
+    .feed-card {
+      background: #fff; border-radius: 18px; padding: 24px; margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.03); cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid transparent;
+    }
+    .feed-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.06); border-color: #e5e5ea; }
+
+    /* 卡片内部样式 */
+    .card-header-info { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .meta-info { font-size: 13px; color: #86868b; font-weight: 500; display: flex; gap: 15px; }
+    .time-cost { font-size: 12px; font-weight: 600; color: #007aff; background: #e5f0ff; padding: 3px 8px; border-radius: 6px; }
+    .card-title { font-size: 18px; font-weight: 600; color: #1d1d1f; margin-bottom: 8px; line-height: 1.4;}
+    .card-summary { font-size: 14px; color: #515154; line-height: 1.5; margin-bottom: 16px; background: #fbfbfd; padding: 12px; border-radius: 10px;}
+
+    /* Top 3 标签组 */
+    .top3-container { display: flex; gap: 10px; align-items: center; flex-wrap: wrap;}
+    .top-label { font-size: 12px; color: #86868b; margin-right: 5px; }
+    .apple-badge { padding: 5px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+    .badge-1 { background: #ebf9ee; color: #34c759; border: 1px solid rgba(52, 199, 89, 0.2);}
+    .badge-2 { background: #fff5e5; color: #ff9500; border: 1px solid rgba(255, 149, 0, 0.2);}
+    .badge-3 { background: #f2f2f7; color: #8e8e93; border: 1px solid rgba(142, 142, 147, 0.2);}
+
+    /* 推理链时间轴 */
+    .reasoning-chain { margin-top: 20px; padding-top: 20px; border-top: 1px dashed #e5e5ea; display: none; }
+    .chain-title { font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 15px; }
+    .timeline { border-left: 2px solid #e5e5ea; margin-left: 8px; padding-left: 20px; list-style: none; }
+    .timeline li { position: relative; margin-bottom: 16px; font-size: 13px; color: #515154; line-height: 1.5;}
+    .timeline li::before {
+      content: ''; position: absolute; left: -26px; top: 4px; width: 10px; height: 10px;
+      border-radius: 50%; background: #fff; border: 2px solid #d2d2d7; box-sizing: border-box;
+    }
+    .timeline li.step-llm::before { border-color: #5e5ce6; background: #e5e4ff; }
+    .timeline li.step-final::before { border-color: #34c759; background: #ebf9ee; }
+    .step-label { font-weight: 600; color: #1d1d1f; margin-right: 5px; }
+    .highlight-text { color: #007aff; font-weight: 500; }
+
+    /* 空状态占位符 */
+    .empty-state { text-align: center; padding: 80px 0; color: #86868b; }
+    .empty-state i { font-size: 48px; opacity: 0.3; margin-bottom: 15px; }
+    .empty-state p { font-size: 14px; font-weight: 500; }
+  </style>
+</head>
+<body>
+<div class="apple-layout">
+
+  <div class="apple-sidebar">
+    <div class="sidebar-title">全局监控视图</div>
+    <div id="tree" class="ztree" style="background:transparent; border:none;"></div>
+  </div>
+
+  <div class="apple-main">
+    <div class="apple-header">
+      <div>
+        <h1 class="large-title" id="curUnitTitle">全部监控单位</h1>
+        <p class="sub-title">正在监听全区档案系统的 AI 鉴定流...</p>
+      </div>
+      <div class="live-indicator">
+        <div class="pulse-dot"></div> Live
+      </div>
+    </div>
+
+    <div class="content-scroll-area" id="feedContainer">
+      <div class="empty-state" id="emptyState">
+        <i class="fa fa-feed"></i>
+        <p>等待实时鉴定数据接入...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<th:block th:include="include :: footer" />
+<th:block th:include="include :: ztree-js" />
+
+<script th:inline="javascript">
+  // 监控卡片最大保留数量，防止浏览器内存溢出
+  const MAX_CARDS = 100;
+  let currentFilterUnit = "全部监控单位";
+
+  $(function() {
+    initDeptTree();
+    // TODO: 在这里建立 WebSocket 连接
+    // connectWebSocket();
+  });
+
+  /**
+   * 1. 动态获取若依的部门(单位)树
+   */
+  function initDeptTree() {
+    var setting = {
+      view: { showLine: false, selectedMulti: false },
+      data: { key: { title: "name" }, simpleData: { enable: true } },
+      callback: {
+        onClick: function(e, id, node) {
+          // 更新大标题
+          $("#curUnitTitle").fadeOut(150, function() {
+            $(this).text(node.name).fadeIn(150);
+          });
+
+          currentFilterUnit = node.name;
+
+          // 过滤中间的数据流
+          if(node.id === 0 || node.name === "全部监控单位") {
+            $(".feed-card").fadeIn(300);
+          } else {
+            $(".feed-card").hide();
+            $(".feed-card[data-unit='"+node.name+"']").fadeIn(300);
+          }
+        }
+      }
+    };
+
+    // 注意：这里需要你后端提供一个查询全区单位树的接口。
+    // 我们先预置一个“全部”的根节点，然后将后端的树形数据拼接到下面。
+    $.get(ctx + "system/unit/treeData", function(data) {
+        // 假设 data 是标准的 zTree 格式数组
+        $.fn.zTree.init($("#tree"), setting, data);
+    });
+
+    // 开发阶段，为防止页面报错，临时放入空数组
+    // $.fn.zTree.init($("#tree"), setting, [{ id: 0, pId: -1, name: "全部监控单位", open: true, iconSkin: "pIcon01" }]);
+  }
+
+  /**
+   * 2. 接收 WebSocket 实时数据并渲染卡片
+   * 假设接收到的 data 格式为:
+   * { deptName: "区委办", fondNo: "P084", title: "...", summary: "...", timeCost: "1.24s", top3: [...], chain: [...] }
+   */
+  function appendFeedCard(data) {
+    // 隐藏空状态
+    $("#emptyState").hide();
+
+    // 构建卡片 HTML (这里使用了 ES6 模板字符串)
+    let cardHtml = `
+                <div class="feed-card" data-unit="${data.deptName}" onclick="toggleChain(this)" style="display:none;">
+                    <div class="card-header-info">
+                        <div class="meta-info">
+                            <span><i class="fa fa-building-o"></i> ${data.deptName}</span>
+                            <span><i class="fa fa-archive"></i> 全宗号: ${data.fondNo}</span>
+                        </div>
+                        <div class="time-cost"><i class="fa fa-bolt"></i> ${data.timeCost}</div>
+                    </div>
+                    <div class="card-title">${data.title}</div>
+                    <div class="card-summary">${data.summary}</div>
+
+                    <div class="top3-container">
+                        <span class="top-label">AI 建议排序：</span>
+                        <div class="apple-badge badge-1">${data.top3[0]}</div>
+                        <div class="apple-badge badge-2">${data.top3[1] || ''}</div>
+                        <div class="apple-badge badge-3">${data.top3[2] || ''}</div>
+                    </div>
+
+                    <div class="reasoning-chain">
+                        <div class="chain-title"><i class="fa fa-code-fork"></i> 完整出结果链 (点击收起)</div>
+                        <ul class="timeline">
+                            ${data.chain.map((step, index) => {
+      let stepClass = (index === data.chain.length - 1) ? 'step-final' : (step.includes('大模型') ? 'step-llm' : '');
+      return `<li class="${stepClass}"><span class="step-label">${index + 1}.</span> ${step}</li>`;
+    }).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+
+    // 将新卡片插入到容器的最前面
+    let $newCard = $(cardHtml);
+    $("#feedContainer").prepend($newCard);
+
+    // 根据当前的左侧单位过滤器决定是否显示
+    if (currentFilterUnit === "全部监控单位" || currentFilterUnit === data.deptName) {
+      $newCard.slideDown(300);
+    }
+
+    // 控制最大卡片数量，防止内存泄漏
+    if ($(".feed-card").length > MAX_CARDS) {
+      $(".feed-card:last").remove();
+    }
+  }
+
+  /**
+   * 3. 点击卡片展开/收起“推理链”
+   */
+  function toggleChain(element) {
+    var chainDiv = $(element).find(".reasoning-chain");
+    chainDiv.slideToggle(250);
+
+    $(".feed-card").css("border-color", "transparent");
+    if(chainDiv.is(":hidden")) {
+      $(element).css("border-color", "#e5e5ea");
+    }
+  }
+</script>
+</body>
+</html>

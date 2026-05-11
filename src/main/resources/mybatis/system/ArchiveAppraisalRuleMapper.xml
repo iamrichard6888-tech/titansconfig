@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.project.system.rule.mapper.ArchiveAppraisalRuleMapper">
+
+    <resultMap type="ArchiveAppraisalRule" id="ArchiveAppraisalRuleResult">
+        <id     property="ruleId"           column="RULE_ID" />
+        <result property="unitId"           column="unitid" />
+        <result property="unitCode"         column="UNIT_CODE" />
+        <result property="categoryL1"       column="CATEGORY_L1" />
+        <result property="categoryL2"       column="CATEGORY_L2" />
+        <result property="clauseNo"         column="CLAUSE_NO" />
+        <result property="clauseText"       column="CLAUSE_TEXT" />
+        <result property="retentionPeriod"  column="RETENTION_PERIOD" />
+        <result property="documentTypes"    column="DOCUMENT_TYPES" />
+        <result property="eventKeywords"    column="EVENT_KEYWORDS" />
+        <result property="excludedTypes"    column="EXCLUDED_TYPES" />
+        <result property="excludedKeywords" column="EXCLUDED_KEYWORDS" />
+        <result property="priority"         column="PRIORITY" />
+        <result property="status"           column="STATUS" />
+        <result property="createBy"         column="CREATE_BY" />
+        <result property="createTime"       column="CREATE_TIME" />
+        <result property="updateBy"         column="UPDATE_BY" />
+        <result property="updateTime"       column="UPDATE_TIME" />
+        <result property="remark"           column="REMARK" />
+    </resultMap>
+
+    <sql id="selectRuleVo">
+        SELECT RULE_ID, unitid, UNIT_CODE, CATEGORY_L1, CATEGORY_L2, CLAUSE_NO, CLAUSE_TEXT,
+               RETENTION_PERIOD, DOCUMENT_TYPES, EVENT_KEYWORDS, EXCLUDED_TYPES, EXCLUDED_KEYWORDS,
+               PRIORITY, STATUS, CREATE_BY, CREATE_TIME, UPDATE_BY, UPDATE_TIME, REMARK
+        FROM ARCHIVE_APPRAISAL_RULE
+    </sql>
+
+    <select id="selectRuleList" parameterType="ArchiveAppraisalRule" resultMap="ArchiveAppraisalRuleResult">
+        <include refid="selectRuleVo"/>
+        <where>
+            <if test="unitId != null and unitId != ''"> AND unitid = #{unitId}</if>
+            <if test="unitCode != null and unitCode != ''"> AND UNIT_CODE = #{unitCode}</if>
+            <if test="categoryL1 != null and categoryL1 != ''"> AND CATEGORY_L1 = #{categoryL1}</if>
+            <if test="categoryL2 != null and categoryL2 != ''"> AND CATEGORY_L2 LIKE concat(concat('%', #{categoryL2}), '%')</if>
+            <if test="clauseText != null and clauseText != ''"> AND CLAUSE_TEXT LIKE concat(concat('%', #{clauseText}), '%')</if>
+            <if test="status != null and status != ''"> AND STATUS = #{status}</if>
+        </where>
+        ORDER BY PRIORITY DESC, CREATE_TIME DESC
+    </select>
+
+    <select id="selectRuleById" parameterType="Long" resultMap="ArchiveAppraisalRuleResult">
+        <include refid="selectRuleVo"/>
+        WHERE RULE_ID = #{ruleId}
+    </select>
+
+    <insert id="insertRule" parameterType="ArchiveAppraisalRule">
+        INSERT INTO ARCHIVE_APPRAISAL_RULE
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="ruleId != null">RULE_ID,</if>
+            <if test="unitId != null">unitid,</if>
+            <if test="unitCode != null">UNIT_CODE,</if>
+            <if test="categoryL1 != null">CATEGORY_L1,</if>
+            <if test="categoryL2 != null">CATEGORY_L2,</if>
+            <if test="clauseNo != null">CLAUSE_NO,</if>
+            <if test="clauseText != null">CLAUSE_TEXT,</if>
+            <if test="retentionPeriod != null">RETENTION_PERIOD,</if>
+            <if test="documentTypes != null">DOCUMENT_TYPES,</if>
+            <if test="eventKeywords != null">EVENT_KEYWORDS,</if>
+            <if test="excludedTypes != null">EXCLUDED_TYPES,</if>
+            <if test="excludedKeywords != null">EXCLUDED_KEYWORDS,</if>
+            <if test="priority != null">PRIORITY,</if>
+            <if test="status != null">STATUS,</if>
+            <if test="createBy != null">CREATE_BY,</if>
+            <if test="createTime != null">CREATE_TIME,</if>
+            <if test="updateBy != null">UPDATE_BY,</if>
+            <if test="updateTime != null">UPDATE_TIME,</if>
+            <if test="remark != null">REMARK,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="ruleId != null">#{ruleId},</if>
+            <if test="unitId != null">#{unitId},</if>
+            <if test="unitCode != null">#{unitCode},</if>
+            <if test="categoryL1 != null">#{categoryL1},</if>
+            <if test="categoryL2 != null">#{categoryL2},</if>
+            <if test="clauseNo != null">#{clauseNo},</if>
+            <if test="clauseText != null">#{clauseText},</if>
+            <if test="retentionPeriod != null">#{retentionPeriod},</if>
+            <if test="documentTypes != null">#{documentTypes},</if>
+            <if test="eventKeywords != null">#{eventKeywords},</if>
+            <if test="excludedTypes != null">#{excludedTypes},</if>
+            <if test="excludedKeywords != null">#{excludedKeywords},</if>
+            <if test="priority != null">#{priority},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+        </trim>
+    </insert>
+
+    <update id="updateRule" parameterType="ArchiveAppraisalRule">
+        UPDATE ARCHIVE_APPRAISAL_RULE
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="unitId != null">unitid = #{unitId},</if>
+            <if test="unitCode != null">UNIT_CODE = #{unitCode},</if>
+            <if test="categoryL1 != null">CATEGORY_L1 = #{categoryL1},</if>
+            <if test="categoryL2 != null">CATEGORY_L2 = #{categoryL2},</if>
+            <if test="clauseNo != null">CLAUSE_NO = #{clauseNo},</if>
+            <if test="clauseText != null">CLAUSE_TEXT = #{clauseText},</if>
+            <if test="retentionPeriod != null">RETENTION_PERIOD = #{retentionPeriod},</if>
+            <if test="documentTypes != null">DOCUMENT_TYPES = #{documentTypes},</if>
+            <if test="eventKeywords != null">EVENT_KEYWORDS = #{eventKeywords},</if>
+            <if test="excludedTypes != null">EXCLUDED_TYPES = #{excludedTypes},</if>
+            <if test="excludedKeywords != null">EXCLUDED_KEYWORDS = #{excludedKeywords},</if>
+            <if test="priority != null">PRIORITY = #{priority},</if>
+            <if test="status != null">STATUS = #{status},</if>
+            <if test="updateBy != null">UPDATE_BY = #{updateBy},</if>
+            <if test="updateTime != null">UPDATE_TIME = #{updateTime},</if>
+            <if test="remark != null">REMARK = #{remark},</if>
+        </trim>
+        WHERE RULE_ID = #{ruleId}
+    </update>
+
+    <delete id="deleteRuleById" parameterType="Long">
+        DELETE FROM ARCHIVE_APPRAISAL_RULE WHERE RULE_ID = #{ruleId}
+    </delete>
+
+    <delete id="deleteRuleByIds" parameterType="String">
+        DELETE FROM ARCHIVE_APPRAISAL_RULE WHERE RULE_ID in
+        <foreach item="ruleId" collection="array" open="(" separator="," close=")">
+            #{ruleId}
+        </foreach>
+    </delete>
+
+
+</mapper>

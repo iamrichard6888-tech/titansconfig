@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <th:block th:include="include :: header('规则知识库')" />
+  <th:block th:include="include :: ztree-css" />
+  <style>
+    /* Apple 全局字体与重置 */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, "PingFang SC", sans-serif;
+      background-color: #f5f5f7; margin: 0; padding: 0; color: #1d1d1f;
+    }
+    .apple-layout { display: flex; height: 100vh; overflow: hidden; }
+
+    /* 左侧单位树 (毛玻璃效果) */
+    .apple-sidebar {
+      width: 260px; background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(0, 0, 0, 0.05);
+      padding: 30px 15px; overflow-y: auto; flex-shrink: 0; z-index: 10;
+    }
+    .sidebar-title { font-size: 13px; font-weight: 600; color: #86868b; text-transform: uppercase; margin-bottom: 15px; padding-left: 10px;}
+
+    /* 右侧主内容区 */
+    .apple-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+
+    /* 顶部悬浮操作头 */
+    .apple-header {
+      padding: 30px 40px 20px 40px; background: rgba(245, 245, 247, 0.85);
+      backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+      border-bottom: 1px solid rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 20;
+    }
+    .large-title { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; margin: 0 0 5px 0; }
+    .sub-title { font-size: 14px; color: #86868b; margin-bottom: 20px; }
+
+    /* 操作栏：分段器 + 工具组 */
+    .action-bar { display: flex; justify-content: space-between; align-items: center; }
+    .action-tools { display: flex; align-items: center; gap: 12px; }
+
+    /* 苹果风格下拉分段控制器 */
+    .segmented-control { background: #e3e3e8; border-radius: 9px; padding: 3px; display: inline-flex; }
+    .segmented-control button {
+      background: transparent; border: none; padding: 6px 14px; border-radius: 7px;
+      font-size: 13px; font-weight: 600; color: #1d1d1f; cursor: pointer; transition: all 0.2s;
+    }
+    .segmented-control button.active { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+
+    /* Spotlight 风格搜索框 */
+    .spotlight-search {
+      background: #fff; border-radius: 8px; border: 1px solid #d2d2d7;
+      padding: 8px 15px 8px 32px; width: 220px; font-size: 13px; transition: all 0.2s;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%2386868b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>');
+      background-repeat: no-repeat; background-position: 10px center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    }
+    .spotlight-search:focus { border-color: #007aff; box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2); outline: none; width: 260px;}
+
+    /* Apple 标准圆角按钮 */
+    .apple-btn {
+      background: #007aff; color: #fff; border: none; border-radius: 8px;
+      padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .apple-btn:hover { background: #0062cc; }
+    .apple-btn-secondary { background: #e8e8ed; color: #007aff; }
+    .apple-btn-secondary:hover { background: #d1d1d6; }
+
+    /* 内容滚动区 */
+    .content-scroll-area { flex: 1; display: flex; overflow-y: auto; padding: 0 20px 40px 40px; scroll-behavior: smooth; }
+    .rule-list-container { flex: 1; padding-right: 40px; padding-top: 10px;}
+
+    /* 右侧悬浮目录 (TOC) */
+    .toc-sidebar { width: 220px; padding-top: 20px; position: sticky; top: 0; align-self: flex-start; }
+    .toc-title { font-size: 12px; font-weight: 700; color: #86868b; text-transform: uppercase; margin-bottom: 12px;}
+    .toc-list { list-style: none; padding: 0; margin: 0; border-left: 2px solid #e5e5ea; }
+    .toc-list li { margin-bottom: 2px; }
+    .toc-list a {
+      display: block; padding: 6px 12px; color: #86868b; font-size: 13px; font-weight: 500;
+      text-decoration: none; transition: all 0.2s; border-left: 2px solid transparent; margin-left: -2px;
+    }
+    .toc-list a:hover { color: #1d1d1f; background: #f0f0f2; border-radius: 0 6px 6px 0; }
+    .toc-list a.active { color: #007aff; border-left-color: #007aff; font-weight: 600; }
+
+    /* Apple Inset Grouped List 样式 */
+    .group-header { font-size: 20px; font-weight: 700; margin: 35px 0 15px 10px; color: #1d1d1f; }
+    .apple-list-group { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); overflow: hidden; }
+    .apple-list-item { display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid #f2f2f7; transition: background 0.2s; }
+    .apple-list-item:last-child { border-bottom: none; }
+    .apple-list-item:hover { background: #fbfbfd; }
+
+    .item-clause { font-size: 15px; font-weight: 600; color: #1d1d1f; width: 60px; flex-shrink: 0; }
+    .item-content { flex: 1; padding-right: 20px; }
+    .item-title { font-size: 15px; color: #1d1d1f; margin-bottom: 4px; font-weight: 500; }
+    .item-desc { font-size: 13px; color: #86868b; }
+
+    .item-action { display: flex; align-items: center; gap: 15px; flex-shrink: 0; }
+    .apple-badge { padding: 4px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; text-align: center; width: 65px;}
+    .badge-forever { background: #ffeceb; color: #ff3b30; }
+    .badge-30y { background: #fff5e5; color: #ff9500; }
+    .badge-10y { background: #ebf9ee; color: #34c759; }
+    /* 苹果风编辑按钮（供参考对齐） */
+    .btn-edit {
+      background-color: #f2f2f7;
+      color: #007aff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 14px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    .btn-edit:hover {
+      background-color: #e5e5ea;
+    }
+
+    /* 苹果风删除按钮（新增） */
+    .btn-delete {
+      background-color: transparent;
+      color: #ff3b30;
+      border: 1px solid #ff3b30;
+      padding: 5px 13px;
+      border-radius: 14px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-left: 8px;
+      font-weight: 500;
+    }
+    .btn-delete:hover {
+      background-color: #ff3b30;
+      color: #fff;
+    }
+
+    /* 空状态占位符 */
+    .empty-state { text-align: center; padding: 80px 0; color: #86868b; display: none; }
+    .empty-state i { font-size: 48px; opacity: 0.3; margin-bottom: 15px; }
+    .empty-state p { font-size: 14px; font-weight: 500; }
+  </style>
+</head>
+<body>
+<div class="apple-layout">
+  <div class="apple-sidebar">
+    <div class="sidebar-title">组织架构</div>
+    <div id="tree" class="ztree" style="background:transparent; border:none;"></div>
+  </div>
+
+  <div class="apple-main">
+    <div class="apple-header">
+      <h1 class="large-title" id="curUnitTitle">选择单位以加载知识库</h1>
+      <p class="sub-title" id="ruleCountDesc">请在左侧选择具体单位</p>
+
+      <div class="action-bar">
+        <div class="segmented-control" id="categoryTabs">
+          <button class="active" onclick="changeCategory('', this)">全部</button>
+          <button onclick="changeCategory('WS', this)">文书(WS)</button>
+          <button onclick="changeCategory('KJ', this)">科技(KJ)</button>
+          <button onclick="changeCategory('KU', this)">会计(KU)</button>
+          <button onclick="changeCategory('RS', this)">人事(RS)</button>
+        </div>
+
+        <div class="action-tools">
+          <input type="text" class="spotlight-search" id="searchInput" placeholder="搜索条款、关键词...">
+          <button class="apple-btn apple-btn-secondary" onclick="openImport()">
+            <i class="fa fa-cloud-upload"></i> 智能导入
+          </button>
+          <button class="apple-btn" onclick="openAdd()">
+            <i class="fa fa-plus"></i> 新增规则
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-scroll-area">
+      <div class="rule-list-container" id="ruleContainer">
+        <div class="empty-state" id="emptyState">
+          <i class="fa fa-folder-open-o"></i>
+          <p>该分类下暂无规则数据</p>
+        </div>
+
+      </div>
+
+      <div class="toc-sidebar">
+        <div class="toc-title">快速导航</div>
+        <ul class="toc-list" id="tocNav">
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<th:block th:include="include :: footer" />
+<th:block th:include="include :: ztree-js" />
+
+<script th:inline="javascript">
+  // 核心请求前缀，对应我们写的 Controller
+  var prefix = ctx + "system/rule";
+
+  // 当前查询状态
+  var currentDeptId = null;
+  var currentCategory = "";
+
+  $(function() {
+    initDeptTree();
+    bindEvents();
+  });
+
+  /**
+   * 1. 初始化单位树
+   */
+  function initDeptTree() {
+    var setting = {
+      view: { showLine: false, selectedMulti: false },
+      data: { key: { title: "name" }, simpleData: { enable: true } },
+      callback: {
+        onClick: function(e, id, node) {
+          $("#curUnitTitle").fadeOut(150, function() {
+            $(this).text(node.name).fadeIn(150);
+          });
+
+          currentDeptId = node.id;
+          // 切换单位后，重新加载右侧数据
+          loadRuleData();
+        }
+      }
+    };
+
+    // 注意：正式环境下解除这里的注释，调用若依原生部门接口
+    $.get(ctx + "system/unit/treeData", function(data) {
+        $.fn.zTree.init($("#tree"), setting, data);
+    });
+
+    // 为了防止页面报错，临时放入空数组结构
+    // var mockTree = [
+    //   { id: 100, pId: 0, name: "黄埔区国家档案馆", open: true, iconSkin: "pIcon01" },
+    //   { id: 101, pId: 100, name: "区财政局" }
+    // ];
+    // $.fn.zTree.init($("#tree"), setting, mockTree);
+  }
+
+  /**
+   * 2. 切换门类 (Tab)
+   */
+  function changeCategory(categoryCode, btn) {
+    $("#categoryTabs button").removeClass("active");
+    $(btn).addClass("active");
+
+    currentCategory = categoryCode;
+    if(currentDeptId != null) {
+      loadRuleData();
+    }
+  }
+
+  /**
+   * 3. 核心：发起 Ajax 请求，获取规则数据
+   */
+  function loadRuleData() {
+    $.modal.loading("正在加载规则库...");
+
+    var queryParams = {
+      unitId: currentDeptId,
+      primaryCategory: currentCategory,
+      pageNum: 1,
+      pageSize: 10000
+    };
+
+    $.post(prefix + "/list", queryParams, function(result) {
+      $.modal.closeLoading();
+      if (result.code == 0) {
+        var rules = result.rows;
+        $("#ruleCountDesc").text("当前共配置 " + result.total + " 条保管期限规则");
+        renderRuleList(rules);
+      } else {
+        $.modal.msgError(result.msg);
+      }
+    });
+  }
+
+
+  /**
+   * 4. 核心：动态分组渲染 HTML 和 TOC
+   */
+  function renderRuleList(rules) {
+    var $container = $("#ruleContainer");
+    var $toc = $("#tocNav");
+
+    // 清理旧数据，保留 emptyState
+    $container.find(".category-group").remove();
+    $toc.empty();
+
+    if (!rules || rules.length === 0) {
+      $("#emptyState").show();
+      return;
+    }
+    $("#emptyState").hide();
+
+    // 数据分组：使用我们最新的字段 categoryL2 (二级门类)
+    var groups = {};
+    rules.forEach(function(rule) {
+      // 【修复1】这里原来是 secondaryCategory，改成 categoryL2
+      var groupKey = rule.categoryL2 || '未分类';
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(rule);
+    });
+
+    // 遍历分组，生成 HTML
+    var groupIndex = 1;
+    for (var key in groups) {
+      var groupRules = groups[key];
+      var sectionId = "section-" + groupIndex;
+
+      // 1. 生成大标题
+      var html = `<div class="category-group">
+                                <h2 class="group-header" id="${sectionId}">${key}</h2>
+                                <div class="apple-list-group">`;
+
+      // 2. 生成组内条款
+      groupRules.forEach(function(r) {
+        var badgeClass = r.retentionPeriod == '永久' ? 'badge-forever' :
+                (r.retentionPeriod == '30年' ? 'badge-30y' : 'badge-10y');
+
+        // 为了让卡片更丰富，我们把“适用文种”拿出来展示在副标题上
+        var docTypesDesc = r.documentTypes ? '适用文种: ' + r.documentTypes : '暂无特定文种要求';
+
+// ... 前面的拼接代码保持不变 ...
+
+        html += `<div class="apple-list-item">
+            <div class="item-clause">${r.clauseNo || '-'}</div>
+            <div class="item-content">
+                <div class="item-title">${r.clauseText}</div>
+                <div class="item-desc">${docTypesDesc}</div>
+            </div>
+            <div class="item-action">
+                <span class="apple-badge ${badgeClass}">${r.retentionPeriod}</span>
+                <button class="btn-edit" onclick="openEdit('${r.ruleId}')">编辑</button>
+                <button class="btn-delete" onclick="deleteRule('${r.ruleId}')">删除</button>
+            </div>
+        </div>`;
+
+// ... 后面的拼接代码保持不变 ...
+      });
+
+      html += `   </div>
+                          </div>`;
+
+      $container.append(html);
+
+      // 3. 同步生成右侧 TOC 目录树
+      // 针对 01 等数字分类，如果是纯数字，可以加个前缀或者直接展示
+      $toc.append(`<li><a href="#${sectionId}">${key}</a></li>`);
+      groupIndex++;
+    }
+
+    // 为新生成的 TOC 绑定平滑滚动事件
+    bindTocEvents();
+  }
+
+  /**
+   * 5. 绑定交互事件 (TOC滚动、实时搜索)
+   */
+  function bindEvents() {
+    // Spotlight 客户端搜索过滤
+    $('#searchInput').on('input', function() {
+      var keyword = $(this).val().toUpperCase();
+      if(keyword) {
+        $('.apple-list-item').hide();
+        $('.apple-list-item').filter(function() {
+          return $(this).text().toUpperCase().indexOf(keyword) > -1;
+        }).show();
+      } else {
+        $('.apple-list-item').show();
+      }
+    });
+  }
+
+  function bindTocEvents() {
+    $('.toc-list a').on('click', function(e) {
+      e.preventDefault();
+      $('.toc-list a').removeClass('active');
+      $(this).addClass('active');
+
+      var targetId = $(this).attr('href');
+      var targetOffset = $(targetId).offset().top;
+      var containerScrollTop = $('.content-scroll-area').scrollTop();
+      var containerOffset = $('.content-scroll-area').offset().top;
+
+      $('.content-scroll-area').animate({
+        scrollTop: containerScrollTop + targetOffset - containerOffset - 20
+      }, 300);
+    });
+  }
+
+  // --- 若依标准操作 ---
+  function openImport() {
+    if(!currentDeptId) { $.modal.msgWarning("请先在左侧选择要导入的单位"); return; }
+    $.modal.open("智能导入解析方案", prefix + "/import/" + currentDeptId, '800', '500');
+  }
+
+  function openAdd() {
+    if(!currentDeptId) { $.modal.msgWarning("请先在左侧选择要新增规则的单位"); return; }
+    $.modal.open("新增条款", prefix + "/add/" + currentDeptId);
+  }
+
+  // 绑定编辑按钮事件
+  function openEdit(ruleId) {
+    // 这是若依标准的打开修改弹窗方法
+    var url = ctx + "system/rule/edit/" + ruleId;
+    $.modal.open("修改智能鉴定规则", url, 800, 600);
+  }
+
+  /**
+   * 业务逻辑：删除单条规则
+   * @param {String} ruleId 规则主键
+   */
+  function deleteRule(ruleId) {
+    // 1. 弹出防误触确认框
+    $.modal.confirm("确认要删除这条规则吗？删除操作不可逆。", function() {
+      // 2. 发起后端删除请求
+      $.ajax({
+        url: ctx + "system/rule/remove", // 若依标准删除接口路径
+        type: "POST",
+        data: {
+          "ids": ruleId  // 若依默认使用 ids 作为参数名接收主键
+        },
+        success: function(result) {
+          // 若依标准返回体 code 0 或 200 表示成功
+          if (result.code == 0 || result.code == 200) {
+            $.modal.msgSuccess("删除成功");
+            // 3. 刷新页面列表数据 (请确保 loadRuleData() 方法存在)
+            loadRuleData();
+          } else {
+            $.modal.msgError(result.msg || "删除失败");
+          }
+        },
+        error: function() {
+          $.modal.msgError("网络异常，请稍后再试");
+        }
+      });
+    });
+  }
+</script>
+</body>
+</html>

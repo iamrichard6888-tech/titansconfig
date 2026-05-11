@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.project.system.seperatetable.mapper.SeperateTableMapper">
+
+	<select id="selectAllUnits" resultType="java.util.Map">
+		SELECT qzh, unitid FROM T_ALLUNIT_HAVEDATA
+	</select>
+
+	<select id="checkTableExists" resultType="int">
+		SELECT count(1) FROM ALL_TABLES WHERE table_name = UPPER(#{tableName}) and OWNER = #{currentSchema}
+	</select>
+
+	<update id="createSrcListTable" timeout="600">
+		CREATE TABLE ${tableName} AS
+		SELECT s.* FROM T_ER_SRCLIST_TONEWSYS s
+		WHERE EXISTS (
+			SELECT 1
+			FROM T_DA_DATA_TONEWSYS d
+			WHERE s.erid = d.erid
+			  AND d.unitid = '${unitid}'
+		)
+	</update>
+
+	<update id="createStoreItemTable" timeout="600">
+		CREATE TABLE ${tableName} AS
+		SELECT a.* FROM T_ER_STOREITEM_TONEWSYS a
+		WHERE EXISTS (
+			SELECT 1
+			FROM ${srcTableName} s
+			WHERE a.id = s.STOREITEMID
+		)
+	</update>
+
+	<update id="addCopyUrlColumn">
+		ALTER TABLE ${tableName} ADD COPYURL VARCHAR2(5000)
+	</update>
+
+	<update id="createIndex">
+		CREATE INDEX ${indexName} ON ${tableName} (${columns})
+	</update>
+
+
+	<select id="getTableVolume" resultType="int">
+		SELECT count(1) FROM ${tableName}
+	</select>
+
+
+	<update id="dropTable2">
+		BEGIN
+		EXECUTE IMMEDIATE 'DROP TABLE ${tableName}';
+		EXCEPTION
+           WHEN OTHERS THEN
+              IF SQLCODE != -942 THEN
+                 RAISE;
+		END IF;
+		END;
+	</update>
+
+	<update id="dropTable">
+		DROP TABLE IF EXISTS ${tableName}
+	</update>
+
+	<delete id="deleteLog">
+		DELETE FROM aaa WHERE QZH = #{qzh}
+	</delete>
+
+
+	<insert id="insertLog">
+		INSERT INTO aaa (QZH, TABLENAME, VOLUME, STATUS, BEGINTIME, ENDTIME, PID)
+		VALUES (
+				   #{qzh, jdbcType=VARCHAR},
+				   #{tableName, jdbcType=VARCHAR},
+				   #{volume, jdbcType=INTEGER},
+				   #{status, jdbcType=VARCHAR},
+				   #{beginTime, jdbcType=VARCHAR},
+				   #{endTime, jdbcType=VARCHAR}, #{pid, jdbcType=VARCHAR}
+			   )
+	</insert>
+
+	<update id="updateLog">
+		UPDATE aaa
+		SET VOLUME = #{volume},
+			STATUS = #{status},
+			ENDTIME = #{endTime}
+		WHERE QZH = #{qzh} AND TABLENAME = #{tableName}
+	</update>
+
+	<select id="selectLogList" resultType="map">
+		SELECT QZH, TABLENAME, VOLUME, STATUS, BEGINTIME, ENDTIME, PID
+		FROM aaa
+		ORDER BY BEGINTIME DESC
+	</select>
+
+	<delete id="deleteLogByPid">
+		DELETE FROM aaa WHERE PID = #{pid}
+	</delete>
+
+	<select id="getCurrentSchema" resultType="string">
+		SELECT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') FROM DUAL
+	</select>
+
+
+</mapper>

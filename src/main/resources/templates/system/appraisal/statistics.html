@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <th:block th:include="include :: header('效能统计仪表盘')" />
+  <style>
+    /* Apple 全局字体与重置 */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, "PingFang SC", sans-serif;
+      background-color: #f5f5f7; margin: 0; padding: 0; color: #1d1d1f; overflow-x: hidden;
+    }
+
+    .apple-main { padding: 0 40px 40px 40px; }
+
+    /* 顶部悬浮头 */
+    .apple-header {
+      padding: 30px 0 20px 0; background: rgba(245, 245, 247, 0.85);
+      backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+      border-bottom: 1px solid rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 20;
+      display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px;
+    }
+    .large-title { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; margin: 0 0 5px 0; }
+    .sub-title { font-size: 14px; color: #86868b; margin: 0; }
+
+    /* 苹果风格时间选择器 */
+    .time-filter { background: #e3e3e8; border-radius: 9px; padding: 3px; display: inline-flex; }
+    .time-filter button {
+      background: transparent; border: none; padding: 6px 16px; border-radius: 7px;
+      font-size: 13px; font-weight: 600; color: #1d1d1f; cursor: pointer; transition: all 0.2s;
+    }
+    .time-filter button.active { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+
+    /* 核心指标卡片 */
+    .kpi-row { display: flex; gap: 20px; margin-bottom: 20px; }
+    .kpi-card {
+      flex: 1; background: #fff; border-radius: 18px; padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.03); transition: transform 0.3s ease;
+    }
+    .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
+    .kpi-title { font-size: 14px; color: #86868b; font-weight: 600; display: flex; justify-content: space-between; margin-bottom: 15px;}
+    .kpi-title i { font-size: 18px; opacity: 0.8; }
+    .kpi-value { font-size: 32px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.5px; margin-bottom: 10px;}
+    .kpi-unit { font-size: 16px; color: #86868b; font-weight: 500; }
+
+    /* 动态涨跌幅胶囊 */
+    .trend-up { color: #34c759; font-size: 13px; font-weight: 600; background: #ebf9ee; padding: 4px 8px; border-radius: 6px; display: inline-block;}
+    .trend-down { color: #007aff; font-size: 13px; font-weight: 600; background: #e5f0ff; padding: 4px 8px; border-radius: 6px; display: inline-block;}
+    .trend-flat { color: #86868b; font-size: 13px; font-weight: 600; background: #f2f2f7; padding: 4px 8px; border-radius: 6px; display: inline-block;}
+
+    /* 图表卡片 */
+    .chart-row { display: flex; gap: 20px; margin-bottom: 20px; }
+    .chart-card {
+      background: #fff; border-radius: 18px; padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.03); flex: 1; min-width: 0; position: relative;
+    }
+    .chart-title { font-size: 18px; font-weight: 600; color: #1d1d1f; margin-bottom: 20px; }
+    .chart-container { height: 320px; width: 100%; }
+  </style>
+</head>
+<body>
+<div class="apple-main">
+
+  <div class="apple-header">
+    <div>
+      <h1 class="large-title">智能鉴定效能统计</h1>
+      <p class="sub-title">系统全盘运行状态与 AI 路由数据看板</p>
+    </div>
+    <div class="time-filter" id="timeFilter">
+      <button data-range="today">今日</button>
+      <button data-range="week">本周</button>
+      <button data-range="month" class="active">近30天</button>
+      <button data-range="year">全年</button>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-title">累计处理档案 <i class="fa fa-archive text-primary"></i></div>
+      <div class="kpi-value"><span id="kpiTotalCount">-</span> <span class="kpi-unit">份</span></div>
+      <div id="trendTotalCount" class="trend-flat">计算中...</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">整体自动化率 <i class="fa fa-magic text-navy"></i></div>
+      <div class="kpi-value"><span id="kpiAutoRate">-</span> <span class="kpi-unit">%</span></div>
+      <div id="trendAutoRate" class="trend-flat">计算中...</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">累计节省人工 <i class="fa fa-clock-o text-warning"></i></div>
+      <div class="kpi-value"><span id="kpiSaveHours">-</span> <span class="kpi-unit">小时</span></div>
+      <div id="trendSaveHours" class="trend-flat">计算中...</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">专家纠错率 <i class="fa fa-shield text-success"></i></div>
+      <div class="kpi-value"><span id="kpiErrorRate">-</span> <span class="kpi-unit">%</span></div>
+      <div id="trendErrorRate" class="trend-flat">计算中...</div>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-card" style="flex: 0.4;">
+      <div class="chart-title">AI 四级路由流量分布</div>
+      <div id="routeChart" class="chart-container"></div>
+    </div>
+
+    <div class="chart-card" style="flex: 0.6;">
+      <div class="chart-title">专家纠错率趋势</div>
+      <div id="trendChart" class="chart-container"></div>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-card">
+      <div class="chart-title">大模型(LLM)兜底调用量 Top 5 单位</div>
+      <div id="llmTopChart" class="chart-container" style="height: 350px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<th:block th:include="include :: footer" />
+<script th:src="@{/ajax/libs/report/echarts/echarts-all.min.js}"></script>
+
+<script type="text/javascript">
+  // 核心请求前缀 (请根据实际 Controller 路径修改)
+  var prefix = ctx + "system/appraisal/stats";
+
+  // 声明全局 ECharts 实例
+  var routeChart, trendChart, llmTopChart;
+
+  $(function() {
+    // 1. 初始化空图表
+    initCharts();
+
+    // 2. 绑定时间过滤器点击事件
+    $('#timeFilter button').click(function() {
+      $('#timeFilter button').removeClass('active');
+      $(this).addClass('active');
+      var range = $(this).data('range');
+      loadStatisticsData(range);
+    });
+
+    // 3. 页面加载完成时，默认触发一次“近30天”的数据请求
+    loadStatisticsData('month');
+
+    // 4. 监听窗口大小变化以重绘图表
+    window.addEventListener("resize", function() {
+      if(routeChart) routeChart.resize();
+      if(trendChart) trendChart.resize();
+      if(llmTopChart) llmTopChart.resize();
+    });
+  });
+
+  /**
+   * 初始化 ECharts 实例并配置基础样式（此时无数据）
+   */
+  function initCharts() {
+    // --- 路由分布图 (初始骨架) ---
+    routeChart = echarts.init(document.getElementById('routeChart'));
+    routeChart.setOption({
+      tooltip: { trigger: 'item', formatter: "{a} <br/>{b} : {c} 份 ({d}%)" },
+      legend: { bottom: '0%', left: 'center', icon: 'circle', textStyle: { color: '#86868b' } },
+      color: ['#34c759', '#5ac8fa', '#ff9500', '#ff3b30'],
+      series: [{
+        name: '匹配路径', type: 'pie', radius: ['40%', '70%'], center: ['50%', '45%'],
+        itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+        label: { show: false, position: 'center' },
+        emphasis: { label: { show: true, fontSize: '18', fontWeight: 'bold', color: '#1d1d1f' } },
+        data: [] // 等待后台数据注入
+      }]
+    });
+
+    // --- 纠错率趋势图 (初始骨架) ---
+    trendChart = echarts.init(document.getElementById('trendChart'));
+    trendChart.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'line', lineStyle: { color: '#d2d2d7', width: 2 } }, formatter: "{b}<br/>纠错率: {c}%" },
+      grid: { left: '3%', right: '4%', bottom: '3%', top: '5%', containLabel: true },
+      xAxis: { type: 'category', boundaryGap: false, data: [], axisLine: { lineStyle: { color: '#e5e5ea' } }, axisLabel: { color: '#86868b' } },
+      yAxis: { type: 'value', axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#f2f2f7', type: 'dashed' } }, axisLabel: { color: '#86868b', formatter: '{value} %' } },
+      series: [{
+        name: '纠错率', type: 'line', smooth: true, symbol: 'circle', symbolSize: 8,
+        itemStyle: { color: '#007aff' },
+        lineStyle: { width: 4, color: '#007aff', shadowColor: 'rgba(0,122,255,0.3)', shadowBlur: 10, shadowOffsetY: 5 },
+        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(0,122,255,0.2)' }, { offset: 1, color: 'rgba(0,122,255,0.0)' }]) },
+        data: [] // 等待后台数据注入
+      }]
+    });
+
+    // --- LLM调用量柱状图 (初始骨架) ---
+    llmTopChart = echarts.init(document.getElementById('llmTopChart'));
+    llmTopChart.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      grid: { left: '3%', right: '4%', bottom: '8%', top: '10%', containLabel: true },
+      xAxis: { type: 'category', data: [], axisLine: { lineStyle: { color: '#e5e5ea' } }, axisLabel: { color: '#1d1d1f', fontWeight: 600, margin: 15 } },
+      yAxis: { type: 'value', axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#f2f2f7' } }, axisLabel: { color: '#86868b' } },
+      series: [{
+        name: '兜底调用次数', type: 'bar', barWidth: '35%',
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: '#ff9500'}, {offset: 1, color: '#ffd085'}]),
+          barBorderRadius: [8, 8, 0, 0], shadowColor: 'rgba(255, 149, 0, 0.2)', shadowBlur: 10
+        },
+        data: [] // 等待后台数据注入
+      }]
+    });
+  }
+
+  /**
+   * 核心：通过 AJAX 请求后台统计数据
+   * @param timeRange 时间范围标识 (today, week, month, year)
+   */
+  function loadStatisticsData(timeRange) {
+    // 开启 RuoYi 原生的 Loading 遮罩
+    $.modal.loading("正在深度聚合数据计算中...");
+
+    // 发起 AJAX 请求
+    $.post(prefix + "/summaryData", { range: timeRange }, function(result) {
+      $.modal.closeLoading();
+
+      if (result.code == 0) {
+        var data = result.data;
+        // 1. 渲染顶部 KPI
+        renderKpiCards(data.kpi);
+        // 2. 渲染三个图表
+        renderCharts(data.charts);
+      } else {
+        $.modal.msgError("数据拉取失败: " + result.msg);
+      }
+    }).fail(function() {
+      $.modal.closeLoading();
+      $.modal.msgWarning("请确保后端接口 [" + prefix + "/summaryData] 已连通！");
+    });
+  }
+
+  /**
+   * 渲染顶部四个 KPI 卡片及涨跌幅
+   */
+  function renderKpiCards(kpiData) {
+    if(!kpiData) return;
+
+    // 更新数字
+    $("#kpiTotalCount").text(kpiData.totalCount || 0);
+    $("#kpiAutoRate").text(kpiData.autoRate || 0);
+    $("#kpiSaveHours").text(kpiData.saveHours || 0);
+    $("#kpiErrorRate").text(kpiData.errorRate || 0);
+
+    // 更新涨跌势态 (需要后端配合返回 trendType 和 trendText)
+    updateTrendLabel("trendTotalCount", kpiData.totalTrendType, kpiData.totalTrendText);
+    updateTrendLabel("trendAutoRate", kpiData.autoTrendType, kpiData.autoTrendText);
+    updateTrendLabel("trendSaveHours", kpiData.hoursTrendType, kpiData.hoursTrendText);
+    updateTrendLabel("trendErrorRate", kpiData.errorTrendType, kpiData.errorTrendText);
+  }
+
+  /**
+   * 辅助函数：根据趋势类型设置样式
+   * type: 'up' (涨/良性), 'down' (跌/良性或恶性), 'flat' (持平)
+   */
+  function updateTrendLabel(elementId, type, text) {
+    var $el = $("#" + elementId);
+    $el.removeClass("trend-up trend-down trend-flat");
+
+    if (type === 'up') {
+      $el.addClass('trend-up').html('<i class="fa fa-arrow-up"></i> ' + text);
+    } else if (type === 'down') {
+      $el.addClass('trend-down').html('<i class="fa fa-arrow-down"></i> ' + text);
+    } else {
+      $el.addClass('trend-flat').text(text || '-');
+    }
+  }
+
+  /**
+   * 注入新数据，重绘 ECharts
+   */
+  function renderCharts(chartData) {
+    if(!chartData) return;
+
+    // 1. 更新路由分布图
+    if (chartData.routeData) {
+      routeChart.setOption({
+        series: [{ data: chartData.routeData }]
+      });
+    }
+
+    // 2. 更新趋势折线图
+    if (chartData.trendCategories && chartData.trendSeriesData) {
+      trendChart.setOption({
+        xAxis: { data: chartData.trendCategories },
+        series: [{ data: chartData.trendSeriesData }]
+      });
+    }
+
+    // 3. 更新 LLM 单位排行榜
+    if (chartData.topUnitNames && chartData.topUnitValues) {
+      llmTopChart.setOption({
+        xAxis: { data: chartData.topUnitNames },
+        series: [{ data: chartData.topUnitValues }]
+      });
+    }
+  }
+</script>
+</body>
+</html>

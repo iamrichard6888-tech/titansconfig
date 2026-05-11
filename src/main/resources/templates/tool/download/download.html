@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<head>
+	<th:block th:include="include :: header('数据列表')" />
+	<th:block th:include="include :: layout-latest-css" />
+	<th:block th:include="include :: ztree-css" />
+</head>
+<body class="gray-bg">
+	<div class="ui-layout-west">
+		<div class="box box-main">
+			<div class="box-header">
+				<div class="box-title">
+					<i class="fa fa-sitemap"></i> 档案门类
+				</div>
+				<div class="box-tools pull-right">
+					<button type="button" class="btn btn-box-tool" id="btnExpand" title="展开" style="display:none;"><i class="fa fa-chevron-up"></i></button>
+					<button type="button" class="btn btn-box-tool" id="btnCollapse" title="折叠"><i class="fa fa-chevron-down"></i></button>
+					<button type="button" class="btn btn-box-tool" id="btnRefresh" title="刷新门类"><i class="fa fa-refresh"></i></button>
+					<button type="button" class="btn btn-box-tool" id="btnUpdate" title="更新分类树"><i class="fa fa-link"></i></button>
+				</div>
+			</div>
+			<div class="ui-layout-content">
+				<div id="tree" class="ztree"></div>
+			</div>
+		</div>
+	</div>
+	
+	<div class="ui-layout-center">
+		<div class="container-div">
+			<div class="row">
+				<div class="col-sm-12 search-collapse">
+					<form id="user-form">
+						<input type="hidden" id="deptId" name="deptId">
+		                <input type="hidden" id="parentId" name="parentId">
+		                <input type="hidden" id="carriertype" name="carriertype">
+		                <input type="hidden" id="strutstype" name="strutstype">
+		                <input type="hidden" id="unitid" name="unitid">
+		                <input type="hidden" id="sortid" name="sortid">
+						<div class="select-list">
+							<ul>
+								<li>
+									全宗号：<input type="text" name="qzcode"/>
+								</li>
+								<li>
+									档号：<input type="text" name="archiveCode"/>
+								</li>
+								<li>
+									题名：<input type="text" name="title"/>
+								</li>
+								<!--<li class="select-time">
+									<label>创建时间： </label>
+									<input type="text" class="time-input" id="startTime" placeholder="开始时间" name="params[beginTime]"/>
+									<span>-</span>
+									<input type="text" class="time-input" id="endTime" placeholder="结束时间" name="params[endTime]"/>
+								</li>-->
+								<li>
+									<a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+								    <a class="btn btn-warning btn-rounded btn-sm" onclick="resetPre()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
+								</li>
+							</ul>
+						</div>
+					</form>
+				</div>
+				
+		        <div class="btn-group-sm" id="toolbar" role="group">
+		            <a class="btn btn-warning" onclick="exportData()" shiro:hasPermission="tool:download:view">
+			            <i class="fa fa-download"></i> 导出
+			        </a>
+<!--			        <a class="btn btn-warning" onclick="exportAllData()" shiro:hasPermission="tool:download:view">
+			            <i class="fa fa-download"></i> 导全部
+			        </a>-->
+					<a class="btn btn-primary" id="btnExportAll" onclick="toggleExportAll()" shiro:hasPermission="tool:download:view">
+						<i class="fa fa-play"></i> 导全部
+					</a>
+					<a class="btn btn-warning" onclick="getCheckList()" shiro:hasPermission="tool:download:view">
+						<i class="fa fa-download"></i> 导出数据确认单
+					</a>
+					<a class="btn btn-warning" onclick="getMigrationRate()" shiro:hasPermission="tool:download:view">
+						<i class="fa fa-download"></i> 查看迁移进度
+					</a>
+					<a class="btn btn-warning" onclick="openSeperateModal()" shiro:hasPermission="tool:download:view">
+						<i class="fa fa-cut"></i> 拆分表格
+					</a>
+		        </div>
+		        
+		        <div class="col-sm-12 select-table table-striped">
+				    <table id="bootstrap-table"></table>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<th:block th:include="include :: footer" />
+	<th:block th:include="include :: layout-latest-js" />
+	<th:block th:include="include :: ztree-js" />
+	<script th:inline="javascript">
+		var prefix = ctx + "tool/download";
+		var globalIsRunning = false; // 前端维护的全局运行状态
+		var statusTimer = null;      // 定时器对象
+
+		$(function() {
+		    var panehHidden = false;
+		    if ($(this).width() < 769) {
+		        panehHidden = true;
+		    }
+		    $('body').layout({ initClosed: panehHidden, west__size: 300, resizeWithWindow: false });
+	     	// 回到顶部绑定
+	    	if ($.fn.toTop !== undefined) {
+	    		var opt = {
+	    			win:$('.ui-layout-center'),
+	    			doc:$('.ui-layout-center')
+	    		};
+	    		$('#scroll-up').toTop(opt);
+	    	}
+		    queryUserList();
+		    queryDeptTree();
+			// 2. 【新增】：页面加载完立刻查一次状态，并开启 3 秒一次的定时轮询
+			checkGlobalExportStatus();
+			statusTimer = setInterval(checkGlobalExportStatus, 3000);
+		});
+
+		function queryUserList() {
+		    var options = {
+		        url: prefix + "/list",
+		        viewUrl: prefix + "/view/{id}",
+		        createUrl: prefix + "/add",
+		        updateUrl: prefix + "/edit/{id}",
+		        removeUrl: prefix + "/remove",
+		        exportUrl: prefix + "/export",
+		        importUrl: prefix + "/importData",
+		        importTemplateUrl: prefix + "/importTemplate",
+		        sortName: "qzcode,archivecode",
+		        sortOrder: "asc",
+		        modalName: "档案",
+		        pageSize: 100,
+		        columns: [{
+		            checkbox: true
+		        },
+		        {
+		            field: 'id',
+		            title: 'ID',
+		            visible: false
+		        },
+		        {
+		            field: 'iscopy',
+		            title: '是否已下载',
+					sortable: true,
+		            visible: true,
+		            formatter: function (value, row, index) {
+		        		return downloadstatus(row);
+		        	}
+		        },
+		        {
+		            field: 'qzcode',
+		            title: '全宗号',
+		            sortable: true
+		        },
+		        {
+		            field: 'archiveCode',
+		            title: '档号',
+		            sortable: true
+		        },
+		        {
+		            field: 'title',
+		            title: '题名'
+		        }
+		        ]
+		    };
+		    $.table.init(options);
+		}
+		
+		function queryDeptTree()
+		{
+			var url = ctx + "tool/download/sortTreeData";
+			var options2 = {
+		        url: url,
+		        expandLevel: 1,
+		        onClick : zOnClick
+		    };
+			$.tree.init(options2);
+			
+			function zOnClick(event, treeId, treeNode) {
+				$("#unitid").val("");
+				$("#sortid").val("");
+				$("#carriertype").val("");
+				$("#strutstype").val("");
+				loopNode(treeNode);
+				$("#deptId").val(treeNode.id);
+				$("#parentId").val(treeNode.pId);
+				
+				$.table.search();
+			}
+			
+			function loopNode(treeNode){
+				if(treeNode.id!=1){
+					$("#"+treeNode.type.toLowerCase()+"").val(treeNode.typeid);
+					loopNode(treeNode.getParentNode());
+				}
+			}
+		}
+		
+		
+		function updateTree()
+		{
+			var url = ctx + "tool/download/updateTree";
+			var options2 = {
+		        url: url,
+		        expandLevel: 1,
+		        onClick : zOnClick
+		    };
+			$.tree.init(options2);
+			
+			function zOnClick(event, treeId, treeNode) {
+				$("#deptId").val(treeNode.id);
+				$("#parentId").val(treeNode.pId);
+				$.table.search();
+			}
+		}
+		
+		$('#btnExpand').click(function() {
+			$._tree.expandAll(true);
+		    $(this).hide();
+		    $('#btnCollapse').show();
+		});
+		
+		$('#btnCollapse').click(function() {
+			$._tree.expandAll(false);
+		    $(this).hide();
+		    $('#btnExpand').show();
+		});
+		
+		$('#btnRefresh').click(function() {
+			queryDeptTree();
+		});
+		
+		$('#btnUpdate').click(function() {
+			updateTree();
+		});
+		
+		/* 自定义重置-表单重置/隐藏框/树节点选择色/搜索 */
+		function resetPre() {
+			resetDate();
+			$("#user-form")[0].reset();
+			$("#deptId").val("");
+			$("#parentId").val("");
+			$(".curSelectedNode").removeClass("curSelectedNode");
+			$.table.search();
+		}
+
+
+		function downloadstatus(row) {
+		    if (row.iscopy == 'true') {
+		    	return '<i class=\"fa fa-toggle-on text-info fa-2x\"></i> ';
+    		} else {
+    			return '<i class=\"fa fa-toggle-off\"></i> ';
+    		}
+		}
+		
+		/* 用户管理-停用 */
+		function disable(userId) {
+			$.modal.confirm("确认要停用用户吗？", function() {
+				$.operate.post(prefix + "/changeStatus", { "userId": userId, "status": 1 });
+		    })
+		}
+
+		/* 用户管理启用 */
+		function enable(userId) {
+			$.modal.confirm("确认要启用用户吗？", function() {
+				$.operate.post(prefix + "/changeStatus", { "userId": userId, "status": 0 });
+		    })
+		}
+		
+		function exportData(){
+			
+			var ids = $.table.selectColumns("id");
+        	if (ids.length == 0) {
+    			$.modal.alertWarning("请至少选择一条记录");
+    			return;
+    		}
+		
+			var deptId = $("#unitid").val();
+			
+			if(deptId == "" || deptId == "1"){
+				$.modal.alertWarning("请选择档案门类");
+			}
+			
+			 var dataParam = new Array();
+             dataParam.push({ "name": "ids", "value": ids });
+			 dataParam.push({ "name": "deptId", "value": 1 });
+			 //dataParam.push({ "name": "unitid", "value": $("#unitid").val() });
+//             dataParam.push({ "name": "deptId", "value": deptId });
+		
+			
+			$.modal.confirm("确认要导出所选数据吗？", function() {
+				//$.operate.post(prefix + "/downloadfiles", { "ids": ids });
+				
+				 $.modal.loading("正在导出数据，请稍候...");
+                 $.post(prefix + "/downloadfiles", dataParam, function(result) {
+                     if (result.code == web_status.SUCCESS) {
+                     	 // 取消下载
+                         //window.location.href = ctx + "common/download?fileName=" + encodeURI(result.msg) + "&delete=" + true;
+                         
+                         //弹出提示
+                         $.modal.alert("打包已完成！文件路径："+result.msg);
+                         $.table.search();
+                     } else if (result.code == web_status.WARNING) {
+                         $.modal.alertWarning(result.msg);
+                     } else {
+                         $.modal.alertError(result.msg);
+                     }
+                     $.modal.closeLoading();
+                 });
+				//alert("正在开发中");
+				//$.modal.alertWarning("所选数据:"+ids);
+		    })
+		}
+		
+		/*function exportAllData(){
+			
+			console.log($("#strutstype").val());
+			console.log($("#carriertype").val());
+			console.log($("#sortid").val());
+			console.log($("#unitid").val());
+			
+			 var dataParam = new Array();
+             dataParam.push({ "name": "carriertype", "value": $("#carriertype").val() });
+             dataParam.push({ "name": "strutstype", "value": $("#strutstype").val() });
+             dataParam.push({ "name": "unitid", "value": $("#unitid").val() });
+             dataParam.push({ "name": "sortid", "value": $("#sortid").val() });
+		
+			
+			$.modal.confirm("确认要导出所选数据吗？", function() {
+				//$.operate.post(prefix + "/downloadfiles", { "ids": ids });
+				
+				 $.modal.loading("正在导出数据，请稍候...");
+                 $.post(prefix + "/downloadfilesall", dataParam, function(result) {
+                     if (result.code == web_status.SUCCESS) {
+                     	 // 取消下载
+                         //window.location.href = ctx + "common/download?fileName=" + encodeURI(result.msg) + "&delete=" + true;
+                         
+                         //弹出提示
+                         $.modal.alert("打包已完成！文件路径："+result.msg);
+                         $.table.search();
+                     } else if (result.code == web_status.WARNING) {
+                         $.modal.alertWarning(result.msg);
+                     } else {
+                         $.modal.alertError(result.msg);
+                     }
+                     $.modal.closeLoading();
+                 });
+				//alert("正在开发中");
+				//$.modal.alertWarning("所选数据:"+ids);
+		    })
+		}*/
+
+		/**
+		 * 轮询获取后端全局导出状态，并动态渲染按钮
+		 */
+		function checkGlobalExportStatus() {
+			$.get(prefix + "/exportStatus", function(result) {
+				if (result.code == web_status.SUCCESS) {
+					var btn = $("#btnExportAll");
+					if (result.msg === "running") {
+						globalIsRunning = true;
+						// 变成红色的停止按钮
+						btn.removeClass("btn-primary btn-warning").addClass("btn-danger");
+						btn.html('<i class="fa fa-stop"></i> 停止导全部');
+					} else {
+						globalIsRunning = false;
+						// 变成蓝色的启动按钮
+						btn.removeClass("btn-danger btn-warning").addClass("btn-primary");
+						btn.html('<i class="fa fa-play"></i> 导全部');
+					}
+				}
+			});
+		}
+
+		/**
+		 * 点击“导全部 / 停止导全部”触发的事件
+		 */
+		function toggleExportAll() {
+			// 收集筛选参数
+			var dataParam = {
+				carriertype: $("#carriertype").val(),
+				strutstype: $("#strutstype").val(),
+				unitid: $("#unitid").val(),
+				sortid: $("#sortid").val()
+			};
+
+			if (!globalIsRunning) {
+				// 当前是停止状态，点击准备【启动】
+				$.modal.confirm("确认要启动全局导出任务吗？此操作将在后台多线程运行。", function() {
+					$.modal.loading("正在下发启动指令...");
+					// 注意：这里的接口路径必须和 Controller 中的映射保持一致
+					$.post(prefix + "/startExportAll", dataParam, function(result) {
+						$.modal.closeLoading();
+						if (result.code == web_status.SUCCESS) {
+							$.modal.msgSuccess(result.msg);
+							checkGlobalExportStatus(); // 立即刷新按钮状态，不用等下一个3秒
+						} else {
+							$.modal.alertError(result.msg);
+						}
+					});
+				});
+			} else {
+				// 当前是运行状态，点击准备【停止】
+				$.modal.confirm("任务正在运行中，确认要强制停止所有后台数据导出吗？", function() {
+					$.modal.loading("正在发送停止信号...");
+					// 调用停止接口
+					$.post(prefix + "/stopExportAll", function(result) {
+						$.modal.closeLoading();
+						if (result.code == web_status.SUCCESS) {
+							$.modal.msgSuccess(result.msg);
+							checkGlobalExportStatus(); // 立即刷新按钮状态
+						}
+					});
+				});
+			}
+		}
+
+		function getCheckList(){
+			var unitid = $("#unitid").val();
+			var checkListUrl = prefix + "/checklist?unitid="+unitid;
+			if(unitid == "" || unitid == "1"){
+				$.modal.alertWarning("请先在左侧树选择具体的单位！");
+				return; // 没选就不让他往下走，直接拦住
+			}
+			//$.modal.open("导出数据确认单",checkListUrl,1100,600);
+			$.modal.openOptions({
+				title: "导出数据确认单",
+				url: checkListUrl,
+				width: 1100,
+				height: 600,
+				// 1. 自定义底部按钮，把“确定”改成“导出Excel”
+				btn: ['<i class="fa fa-download"></i> 导出Excel', '关闭'],
+				// 2. 重写点击第一个按钮（导出Excel）的执行逻辑
+				yes: function (index, layero) {
+					// 获取子页面（弹窗页面）的 window 对象
+					var iframeWin = layero.find('iframe')[0].contentWindow;
+
+					// 直接调用子页面已经初始化好的若依导出方法
+					iframeWin.$.table.exportExcel();
+
+					// 注意：导出文件通常不希望弹窗被关掉，所以这里不要写 $.modal.close(index);
+					// 让用户导完还可以继续预览
+				},
+				// 点击关闭按钮的逻辑保持默认
+				cancel: function (index) {
+					return true;
+				}
+			});
+		}
+
+		function getMigrationRate(){
+			var toMigrationProgressUrl = prefix + "/tomigrationprogress";
+			$.modal.open("数据迁移进度",toMigrationProgressUrl,950,600);
+		}
+
+		function openSeperateModal() {
+			// 假设你的 controller 路径在 /tool/download 下
+			var url = prefix + "/seperateModal";
+			$.modal.open("全宗数据分表操作面板", url, 1000, 650);
+		}
+
+
+	</script>
+</body>
+<!-- 导入区域 -->
+<script id="importTpl" type="text/template">
+<form enctype="multipart/form-data" class="mt20 mb10">
+	<div class="col-xs-offset-1">
+		<input type="file" id="file" name="file"/>
+		<div class="mt10 pt5">
+			<input type="checkbox" id="updateSupport" name="updateSupport" title="如果登录账户已经存在，更新这条数据。"> 是否更新已经存在的用户数据
+			 &nbsp;	<a onclick="$.table.importTemplate()" class="btn btn-default btn-xs"><i class="fa fa-file-excel-o"></i> 下载模板</a>
+		</div>
+		<font color="red" class="pull-left mt10">
+			提示：仅允许导入“xls”或“xlsx”格式文件！
+		</font>
+	</div>
+</form>
+</script>
+</html>

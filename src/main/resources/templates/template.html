@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>模版字段配置 (本地预览版)</title>
+  <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/zTree.v3/3.5.42/css/metroStyle/metroStyle.css" rel="stylesheet">
+  <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap-table/1.18.3/bootstrap-table.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f3f3f4; padding: 15px; }
+    .box { background: #fff; padding: 15px; border-radius: 4px; border-top: 4px solid #e7eaec; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .search-collapse { background: #fff; border-radius: 4px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .select-list li { display: inline-block; margin-right: 15px; margin-bottom: 10px; }
+    .select-list ul { padding: 0; margin: 0; list-style: none; }
+    .table-box { background: #fff; border-radius: 4px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-sm-3">
+      <div class="box">
+        <div class="box-header" style="border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px;">
+          <strong><i class="fa fa-list-ul"></i> 档案分类结构</strong>
+        </div>
+        <div id="sortTree" class="ztree"></div>
+      </div>
+    </div>
+
+    <div class="col-sm-9">
+      <div class="search-collapse">
+        <form id="template-form">
+          <input type="hidden" id="sortId" name="sortId">
+          <div class="select-list">
+            <ul>
+              <li>字段代号：<input type="text" class="form-control" style="display:inline-block; width:150px;"/></li>
+              <li>字段名称：<input type="text" class="form-control" style="display:inline-block; width:150px;"/></li>
+              <li>
+                <button type="button" class="btn btn-primary btn-sm"><i class="fa fa-search"></i> 搜索</button>
+                <button type="button" class="btn btn-warning btn-sm"><i class="fa fa-refresh"></i> 重置</button>
+              </li>
+            </ul>
+          </div>
+        </form>
+      </div>
+
+      <div class="table-box">
+        <div class="btn-group" id="toolbar" role="group" style="margin-bottom: 10px;">
+          <button class="btn btn-success btn-sm"><i class="fa fa-plus"></i> 新增字段</button>
+          <button class="btn btn-primary btn-sm disabled"><i class="fa fa-edit"></i> 修改</button>
+          <button class="btn btn-danger btn-sm disabled"><i class="fa fa-remove"></i> 删除</button>
+        </div>
+        <table id="bootstrap-table"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/zTree.v3/3.5.42/js/jquery.ztree.all.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/bootstrap-table/1.18.3/bootstrap-table.min.js"></script>
+<script>
+  // 静态树数据
+  var zNodes = [
+    { id: 1, pId: 0, name: "文书类 (元数据)", open: true },
+    { id: 11, pId: 1, name: "实体 (载体)", open: true },
+    { id: 111, pId: 11, name: "按件管理 (结构)", open: true },
+    { id: 1809, pId: 111, name: "一文一件 (业务分类)" }
+  ];
+
+  // 静态表格数据
+  var tableData = [
+    { id: 1, fieldcode: 'WG01', fieldname: '档案馆代码', fieldtype: 'String', length: 200, listshow: true, isinput: true },
+    { id: 2, fieldcode: 'WG02', fieldname: '档号', fieldtype: 'String', length: 100, listshow: true, isinput: true },
+    { id: 3, fieldcode: 'TITLE', fieldname: '题名', fieldtype: 'String', length: 500, listshow: true, isinput: true }
+  ];
+
+  $(function() {
+    // 初始化树
+    $.fn.zTree.init($("#sortTree"), {
+      data: { simpleData: { enable: true } },
+      callback: {
+        onClick: function(e, treeId, treeNode) {
+          if(!treeNode.isParent) alert("已选中分类: " + treeNode.name + "，右侧表格将刷新");
+        }
+      }
+    }, zNodes);
+
+    // 初始化表格
+    $('#bootstrap-table').bootstrapTable({
+      data: tableData,
+      columns: [
+        { checkbox: true },
+        { field: 'fieldcode', title: '字段代号' },
+        { field: 'fieldname', title: '字段名称' },
+        { field: 'fieldtype', title: '字段类型', formatter: function(v){ return "<span class='label label-primary'>"+v+"</span>"; } },
+        { field: 'length', title: '长度' },
+        { field: 'listshow', title: '列表显示', formatter: function(v){ return v ? "<i class='fa fa-check text-success'></i>" : ""; } },
+        { field: 'isinput', title: '是否录入', formatter: function(v){ return v ? "<i class='fa fa-check text-success'></i>" : ""; } },
+        { title: '操作', formatter: function(){ return '<button class="btn btn-success btn-xs"><i class="fa fa-edit"></i> 编辑</button> <button class="btn btn-danger btn-xs"><i class="fa fa-remove"></i> 删除</button>'; } }
+      ]
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" >
+<head>
+  <th:block th:include="include :: header('修改人员')" />
+  <th:block th:include="include :: select2-css" />
+</head>
+<body class="white-bg">
+<div class="wrapper wrapper-content animated fadeInRight ibox-content">
+  <form class="form-horizontal m" id="form-userTemp-edit" th:object="${userTemp}">
+    <input name="id" th:field="*{id}" type="hidden">
+    <div class="form-group">
+      <label class="col-sm-3 control-label is-required">全宗单位：</label>
+      <div class="col-sm-8">
+        <select name="organQzh" id="organQzhSelect" class="form-control" required>
+          <option th:value="*{organQzh}" th:text="*{organQzh}">请搜索或选择全宗单位...</option>
+          <option th:each="organ : ${organList}"
+                  th:text="${organ.qzh} + ' ' + ${organ.organname} "
+                  th:value="${organ.qzh}">
+          </option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="col-sm-3 control-label is-required">登录账号：</label>
+      <div class="col-sm-8"><input name="loginAccount" id="loginAccount" th:field="*{loginAccount}" class="form-control" type="text" required></div>
+    </div>
+    <div class="form-group">
+      <label class="col-sm-3 control-label is-required">用户姓名：</label>
+      <div class="col-sm-8"><input name="userName" th:field="*{userName}" class="form-control" type="text" required></div>
+    </div>
+    <div class="form-group">
+      <label class="col-sm-3 control-label is-required">手机号码：</label>
+      <div class="col-sm-8"><input name="mobilePhone" id="mobilePhone" class="form-control" th:field="*{mobilePhone}" type="text" required placeholder="请输入手机号码"></div>
+    </div>
+    <div class="form-group">
+      <label class="col-sm-3 control-label">部门/科室：</label>
+      <div class="col-sm-8"><input name="deptName" th:field="*{deptName}" class="form-control" type="text"></div>
+    </div>
+    <div class="form-group">
+      <label class="col-sm-3 control-label">用户类型：</label>
+      <div class="col-sm-8">
+        <select name="userType" class="form-control m-b" th:field="*{userType}">
+          <option value="普通用户">普通用户</option>
+          <option value="利用用户">利用用户</option>
+          <option value="系统管理员">系统管理员</option>
+          <option value="安全管理员">安全管理员</option>
+          <option value="安全审计员">安全审计员</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="col-sm-3 control-label">用户描述：</label>
+      <div class="col-sm-8"><textarea name="description" class="form-control" th:field="*{description}"></textarea></div>
+    </div>
+  </form>
+</div>
+<th:block th:include="include :: footer" />
+<th:block th:include="include :: select2-js" />
+<script type="text/javascript">
+  var prefix = ctx + "tool/userconfig";
+
+  // 当页面加载完毕后，自动执行这里面的代码
+  $(function() {
+    // 【核心魔法】：找到我们刚才写的下拉框，调用 .select2() 方法把它变成高级搜索框
+    $('#organQzhSelect').select2({
+      placeholder: "请输入单位名称或拼音进行模糊检索", // 没选时候的提示语
+      allowClear: true // 允许一键清空重新搜
+    });
+
+    $.validator.addMethod("mobilePhoneCheck", function(value, element) {
+      // 正则表达式：1开头，第二位通常是3-9，后面跟9位数字，总共11位
+      var mobileReg = /^1[3-9]\d{9}$/;
+      return mobileReg.test(value);
+    }, "请输入正确的手机号码格式");
+  });
+
+  function submitHandler() {
+    if ($.validate.form()) {
+      $.operate.save(prefix + "/edit", $('#form-userTemp-edit').serialize());
+    }
+  }
+
+  $("#form-userTemp-edit").validate({
+    onkeyup: false,
+    rules: {
+      loginAccount: {
+        remote: {
+          url: prefix + "/checkLoginAccountUnique",
+          type: "post",
+          dataType: "json",
+          data: {
+            "id": function() { return $("#id").val(); }, // 编辑时需要传ID
+            "loginAccount": function() { return $.common.trim($("#loginAccount").val()); }
+          },
+          dataFilter: function(data, type) {
+            return data == "0" ? true : false; // 后端返回0通过，1报错
+          }
+        }
+      },
+      mobilePhone: {
+        // 设置为必填
+        required: true,
+        // 应用自定义的手机号校验规则
+        mobilePhoneCheck: true
+      }
+    },
+    messages: {
+      "loginAccount": {
+        remote: "该登录账号在系统或暂存表中已存在"
+      },
+      "mobilePhone": {
+        required: "手机号码不能为空",
+        mobilePhoneCheck: "请输入正确的手机号码格式"
+      }
+    },
+    focusCleanup: true
+  });
+</script>
+</body>
+</html>
