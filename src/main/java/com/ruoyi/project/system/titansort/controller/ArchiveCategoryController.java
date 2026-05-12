@@ -24,7 +24,7 @@ public class ArchiveCategoryController extends BaseController
     /**
      * 提供给前端加载左侧 Ztree 树结构的接口
      */
-    @GetMapping("/treeData")
+    @PostMapping("/treeData")
     @ResponseBody
     public List<Ztree> treeData(ArchiveCategory archiveCategoryTree) {
         return archiveCategoryTreeService.selectCategoryTree(archiveCategoryTree);

@@ -287,10 +287,13 @@
         simpleData: { enable: true }
       },
       callback: {
-        // 【核心交互优化】：点击节点整行即可触发展开/收起，告别小箭头误触
+        // 点击节点整行展开/收起驱动器
         onClick: function(e, treeId, node) {
           var zTreeObj = $.fn.zTree.getZTreeObj("tree");
 
+          // -----------------------------------------------------------------
+          // 场景 A：点击的是根节点 (全宗单位)
+          // -----------------------------------------------------------------
           if (node.nodeType === "UNIT") {
             currentDeptId = node.id;
             currentCategory = "";
@@ -299,18 +302,20 @@
               $(this).text(node.name).fadeIn(150);
             });
 
-            // 1. 如果尚未挂载子分类，异步去拉取
+            // 如果尚未挂载一级分类，异步拉取 (层级传 1)
             if (!node.children || node.children.length === 0) {
-              loadCategorySubNodes(node, function() {
-                // 拉取成功后，自动展开该父节点
+              loadCategorySubNodes(node, 1, function() {
                 zTreeObj.expandNode(node, true, false, true);
               });
             } else {
-              // 2. 如果已经挂载了，直接 toggle (切换) 它的展开/折叠状态
               zTreeObj.expandNode(node, null, false, true);
             }
 
-          } else if (node.nodeType === "CATEGORY") {
+          }
+                  // -----------------------------------------------------------------
+                  // 场景 B：点击的是分类门类 (可能是一级、二级或三级)
+          // -----------------------------------------------------------------
+          else if (node.nodeType === "CATEGORY") {
             currentDeptId = node.unitId;
             currentCategory = node.categoryCode;
 
@@ -319,8 +324,24 @@
             $("#curUnitTitle").fadeOut(150, function() {
               $(this).text(titleText).fadeIn(150);
             });
+
+            // ✅ 核心补全：允许分类节点继续向下加载它的子分类！
+            // 如果当前节点被标记为文件夹 (isParent)，且还没拉取过子分类
+            if (node.isParent) {
+              if (!node.children || node.children.length === 0) {
+                // 自动推算下一级深度：当前深度 + 1
+                var nextLevel = (node.categoryLevel || 1) + 1;
+
+                loadCategorySubNodes(node, nextLevel, function() {
+                  zTreeObj.expandNode(node, true, false, true);
+                });
+              } else {
+                zTreeObj.expandNode(node, null, false, true);
+              }
+            }
           }
 
+          // 联动刷新右侧数据大盘
           loadRuleData();
         }
       }
@@ -345,8 +366,8 @@
         currentDeptId = nodes[0].id;
         $("#curUnitTitle").text(nodes[0].name);
 
-        // 初始默认挂载并展开第一个根节点
-        loadCategorySubNodes(nodes[0], function() {
+        // 初始拉取单位下的一级分类
+        loadCategorySubNodes(nodes[0], 1, function() {
           zTreeObj.expandNode(nodes[0], true, false, true);
         });
 
@@ -356,24 +377,74 @@
   }
 
   /**
-   * 异步加载指定单位下的门类挂载为子树节点 (增加成功回调)
+   * 🧠 升级版异步加载器：支持传参拉取任意深度 (categoryLevel) 的下级子树
    */
-  function loadCategorySubNodes(parentNode, callback) {
+  /**
+   * 🧠 升级版异步加载器：精准分发层级参数，并严格保护单位树血脉
+   */
+  function loadCategorySubNodes(parentNode, targetLevel, callback) {
     var zTreeObj = $.fn.zTree.getZTreeObj("tree");
-    $.post(ctx + "system/categoryTree/list", { unitId: parentNode.id, categoryLevel: 1 }, function(result) {
-      if (result.code == 0 && result.rows) {
-        var newNodes = result.rows.map(function(cat) {
+
+    var queryParams = {
+      categoryLevel: targetLevel
+    };
+
+    if (targetLevel === 1) {
+      queryParams.unitId = parentNode.id;
+    } else {
+      queryParams.parentId = parentNode.id;
+      queryParams.unitId = parentNode.unitId;
+    }
+
+    console.log("👉 正在下钻请求 [层级 " + targetLevel + "] 子节点，参数:", queryParams);
+
+    $.post(ctx + "system/categoryTree/treeData", queryParams, function(result) {
+      console.log("📥 后端真实响应:", result);
+
+      var dataList = null;
+
+      if (Array.isArray(result)) {
+        dataList = result;
+      } else if (result && result.code == 0) {
+        dataList = result.data || result.rows;
+      }
+
+      if (dataList && dataList.length > 0) {
+
+        var newNodes = dataList.map(function(cat) {
           return {
-            id: "cat_" + cat.categoryId,
+            id: cat.id,
             pId: parentNode.id,
-            name: cat.categoryName + " (" + cat.categoryCode + ")",
-            categoryCode: cat.categoryCode,
-            unitId: parentNode.id,
-            nodeType: "CATEGORY"
+
+            name: cat.name || (cat.categoryName + " (" + cat.categoryCode + ")"),
+            title: cat.title || cat.name,
+
+            unitId: parentNode.nodeType === "UNIT" ? parentNode.id : parentNode.unitId,
+            nodeType: "CATEGORY",
+
+            categoryLevel: targetLevel,
+
+            isParent: targetLevel < 3
           };
         });
 
+        console.log("📦 准备挂载的标准节点数据:", newNodes);
+
         zTreeObj.addNodes(parentNode, newNodes, true);
+        zTreeObj.expandNode(parentNode, true, false, true);
+
+        if (callback) callback();
+      } else {
+        console.warn("⚠️ 当前节点下方没有直接挂载门类数据");
+
+        // ✅ 致命死因修复：绝对不能剥夺 UNIT (单位) 节点的文件夹属性！它下面还有子单位！
+        // 只有当当前下钻的是 CATEGORY (分类门类) 时，才允许退化图标
+        if (parentNode.nodeType === "CATEGORY") {
+          parentNode.isParent = false;
+          zTreeObj.updateNode(parentNode);
+        }
+
+        // ✅ 关键放行：即便该单位没有门类，也必须执行 callback，确保原有的子单位树DOM能够被正常展开！
         if (callback) callback();
       }
     });

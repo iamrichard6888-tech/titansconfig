@@ -9,6 +9,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.project.system.titansort.service.IArchiveCategoryService;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.extractor.POITextExtractor;
@@ -33,6 +34,9 @@ public class ArchiveAppraisalRuleServiceImpl implements IArchiveAppraisalRuleSer
 
     @Autowired
     private ArchiveAppraisalRuleMapper ruleMapper;
+
+    @Autowired
+    private IArchiveCategoryService archiveCategoryService;
 
     @Override
     public List<ArchiveAppraisalRule> selectRuleList(ArchiveAppraisalRule rule) {
@@ -76,7 +80,7 @@ public class ArchiveAppraisalRuleServiceImpl implements IArchiveAppraisalRuleSer
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String importRuleData(MultipartFile file, String unitId) throws Exception {
-
+/*
         if (file == null || file.isEmpty()) throw new Exception("上传的文件不能为空！");
         String fileName = file.getOriginalFilename();
 
@@ -144,9 +148,16 @@ public class ArchiveAppraisalRuleServiceImpl implements IArchiveAppraisalRuleSer
 
             this.insertRule(rule);
             successCount++;
+        }*/
+
+        if (file == null || file.isEmpty()) {
+            throw new Exception("导入文件不能为空！");
         }
 
-        return "解析完毕！文件核心内容共切分为 " + textChunks.size() + " 块串行处理，成功入库 " + successCount + " 条真实规则。";
+        // 转发文件流和所属单位ID，交由专业的分类引擎进行多级自关联解析与入库
+        archiveCategoryService.importWordCategoryTable(file, unitId);
+
+        return "解析完毕！";//文件核心内容共切分为 " + textChunks.size() + " 块串行处理，成功入库 " + successCount + " 条真实规则。
     }
 
     /**

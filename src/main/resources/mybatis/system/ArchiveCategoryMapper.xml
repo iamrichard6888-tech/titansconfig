@@ -19,11 +19,10 @@
         <result property="createTime"    column="create_time"    />
         <result property="updateBy"      column="update_by"      />
         <result property="updateTime"    column="update_time"    />
-        <result property="remark"        column="remark"         />
     </resultMap>
 
     <sql id="selectArchiveCategoryVo">
-        select category_id, unit_id, parent_id, ancestors, category_level, order_num, category_code, category_name, sort_order, status, create_by, create_time, update_by, update_time, remark
+        select category_id, unit_id, parent_id, ancestors, category_level, order_num, category_code, category_name, sort_order, status, create_by, create_time, update_by, update_time
         from archive_category_tree
     </sql>
 
@@ -44,9 +43,14 @@
         where category_id = #{categoryId}
     </select>
 
-    <insert id="insertArchiveCategoryTree" parameterType="ArchiveCategory" useGeneratedKeys="true" keyProperty="categoryId">
+    <insert id="insertArchiveCategoryTree" parameterType="ArchiveCategory">
+        <selectKey keyProperty="categoryId" resultType="Long" order="BEFORE">
+            SELECT COALESCE(MAX(category_id), 0) + 1 FROM archive_category_tree
+        </selectKey>
+
         insert into archive_category_tree
         <trim prefix="(" suffix=")" suffixOverrides=",">
+            category_id,
             <if test="unitId != null and unitId != ''">unit_id,</if>
             <if test="parentId != null">parent_id,</if>
             <if test="ancestors != null">ancestors,</if>
@@ -61,6 +65,7 @@
             <if test="remark != null">remark,</if>
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
+            #{categoryId},
             <if test="unitId != null and unitId != ''">#{unitId},</if>
             <if test="parentId != null">#{parentId},</if>
             <if test="ancestors != null">#{ancestors},</if>

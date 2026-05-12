@@ -38,7 +38,6 @@ public class ArchiveAppraisalRuleController extends BaseController {
     @PostMapping("/list")
     @ResponseBody
     public TableDataInfo list(ArchiveAppraisalRule rule) {
-        System.out.println(rule.toString());
         startPage();
         List<ArchiveAppraisalRule> list = ruleService.selectRuleList(rule);
         return getDataTable(list);
