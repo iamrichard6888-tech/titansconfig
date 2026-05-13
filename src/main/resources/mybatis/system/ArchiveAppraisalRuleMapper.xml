@@ -1,133 +1,143 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.project.system.rule.mapper.ArchiveAppraisalRuleMapper">
 
     <resultMap type="ArchiveAppraisalRule" id="ArchiveAppraisalRuleResult">
-        <id     property="ruleId"           column="RULE_ID" />
-        <result property="unitId"           column="unitid" />
-        <result property="unitCode"         column="UNIT_CODE" />
-        <result property="categoryL1"       column="CATEGORY_L1" />
-        <result property="categoryL2"       column="CATEGORY_L2" />
-        <result property="clauseNo"         column="CLAUSE_NO" />
-        <result property="clauseText"       column="CLAUSE_TEXT" />
-        <result property="retentionPeriod"  column="RETENTION_PERIOD" />
-        <result property="documentTypes"    column="DOCUMENT_TYPES" />
-        <result property="eventKeywords"    column="EVENT_KEYWORDS" />
-        <result property="excludedTypes"    column="EXCLUDED_TYPES" />
-        <result property="excludedKeywords" column="EXCLUDED_KEYWORDS" />
-        <result property="priority"         column="PRIORITY" />
-        <result property="status"           column="STATUS" />
-        <result property="createBy"         column="CREATE_BY" />
-        <result property="createTime"       column="CREATE_TIME" />
-        <result property="updateBy"         column="UPDATE_BY" />
-        <result property="updateTime"       column="UPDATE_TIME" />
-        <result property="remark"           column="REMARK" />
+        <id     property="ruleId"          column="rule_id"          />
+        <result property="qzh"             column="qzh"              />
+        <result property="categoryCode"    column="category_code"    />
+        <result property="parentId"        column="parent_id"        />
+        <result property="clauseNo"        column="clause_no"        />
+        <result property="parentPathText"  column="parent_path_text" />
+        <result property="clauseText"      column="clause_text"      />
+        <result property="fullMergedText"  column="full_merged_text" />
+        <result property="retentionPeriod" column="retention_period" />
+        <result property="documentTypes"   column="document_types"   />
+        <result property="eventKeywords"   column="event_keywords"   />
+        <result property="processStatus"   column="process_status"   />
+        <result property="sortOrder"       column="sort_order"       />
+        <result property="createBy"        column="create_by"        />
+        <result property="createTime"      column="create_time"      />
+        <result property="updateBy"        column="update_by"        />
+        <result property="updateTime"      column="update_time"      />
     </resultMap>
 
     <sql id="selectRuleVo">
-        SELECT RULE_ID, unitid, UNIT_CODE, CATEGORY_L1, CATEGORY_L2, CLAUSE_NO, CLAUSE_TEXT,
-               RETENTION_PERIOD, DOCUMENT_TYPES, EVENT_KEYWORDS, EXCLUDED_TYPES, EXCLUDED_KEYWORDS,
-               PRIORITY, STATUS, CREATE_BY, CREATE_TIME, UPDATE_BY, UPDATE_TIME, REMARK
-        FROM ARCHIVE_APPRAISAL_RULE
+        select rule_id, qzh, category_code, parent_id, clause_no, parent_path_text,
+               clause_text, full_merged_text, retention_period, document_types,
+               event_keywords, process_status, sort_order, create_by, create_time,
+               update_by, update_time
+        from archive_appraisal_rule
     </sql>
 
     <select id="selectRuleList" parameterType="ArchiveAppraisalRule" resultMap="ArchiveAppraisalRuleResult">
         <include refid="selectRuleVo"/>
         <where>
-            <if test="unitId != null and unitId != ''"> AND unitid = #{unitId}</if>
-            <if test="unitCode != null and unitCode != ''"> AND UNIT_CODE = #{unitCode}</if>
-            <if test="categoryL1 != null and categoryL1 != ''"> AND CATEGORY_L1 = #{categoryL1}</if>
-            <if test="categoryL2 != null and categoryL2 != ''"> AND CATEGORY_L2 LIKE concat(concat('%', #{categoryL2}), '%')</if>
-            <if test="clauseText != null and clauseText != ''"> AND CLAUSE_TEXT LIKE concat(concat('%', #{clauseText}), '%')</if>
-            <if test="status != null and status != ''"> AND STATUS = #{status}</if>
+            <if test="qzh != null and qzh != ''"> and qzh = #{qzh}</if>
+            <if test="categoryCode != null and categoryCode != ''"> and category_code = #{categoryCode}</if>
+            <if test="parentId != null and parentId != ''"> and parent_id = #{parentId}</if>
+            <if test="retentionPeriod != null and retentionPeriod != ''"> and retention_period = #{retentionPeriod}</if>
+            <if test="params.keyword != null and params.keyword != ''">
+                and (clause_text like concat('%', #{params.keyword}, '%')
+                or full_merged_text like concat('%', #{params.keyword}, '%'))
+            </if>
         </where>
-        ORDER BY PRIORITY DESC, CREATE_TIME DESC
+        order by sort_order asc
     </select>
 
-    <select id="selectRuleById" parameterType="Long" resultMap="ArchiveAppraisalRuleResult">
-        <include refid="selectRuleVo"/>
-        WHERE RULE_ID = #{ruleId}
-    </select>
-
-    <insert id="insertRule" parameterType="ArchiveAppraisalRule">
-        INSERT INTO ARCHIVE_APPRAISAL_RULE
-        <trim prefix="(" suffix=")" suffixOverrides=",">
-            <if test="ruleId != null">RULE_ID,</if>
-            <if test="unitId != null">unitid,</if>
-            <if test="unitCode != null">UNIT_CODE,</if>
-            <if test="categoryL1 != null">CATEGORY_L1,</if>
-            <if test="categoryL2 != null">CATEGORY_L2,</if>
-            <if test="clauseNo != null">CLAUSE_NO,</if>
-            <if test="clauseText != null">CLAUSE_TEXT,</if>
-            <if test="retentionPeriod != null">RETENTION_PERIOD,</if>
-            <if test="documentTypes != null">DOCUMENT_TYPES,</if>
-            <if test="eventKeywords != null">EVENT_KEYWORDS,</if>
-            <if test="excludedTypes != null">EXCLUDED_TYPES,</if>
-            <if test="excludedKeywords != null">EXCLUDED_KEYWORDS,</if>
-            <if test="priority != null">PRIORITY,</if>
-            <if test="status != null">STATUS,</if>
-            <if test="createBy != null">CREATE_BY,</if>
-            <if test="createTime != null">CREATE_TIME,</if>
-            <if test="updateBy != null">UPDATE_BY,</if>
-            <if test="updateTime != null">UPDATE_TIME,</if>
-            <if test="remark != null">REMARK,</if>
-        </trim>
-        <trim prefix="values (" suffix=")" suffixOverrides=",">
-            <if test="ruleId != null">#{ruleId},</if>
-            <if test="unitId != null">#{unitId},</if>
-            <if test="unitCode != null">#{unitCode},</if>
-            <if test="categoryL1 != null">#{categoryL1},</if>
-            <if test="categoryL2 != null">#{categoryL2},</if>
-            <if test="clauseNo != null">#{clauseNo},</if>
-            <if test="clauseText != null">#{clauseText},</if>
-            <if test="retentionPeriod != null">#{retentionPeriod},</if>
-            <if test="documentTypes != null">#{documentTypes},</if>
-            <if test="eventKeywords != null">#{eventKeywords},</if>
-            <if test="excludedTypes != null">#{excludedTypes},</if>
-            <if test="excludedKeywords != null">#{excludedKeywords},</if>
-            <if test="priority != null">#{priority},</if>
-            <if test="status != null">#{status},</if>
-            <if test="createBy != null">#{createBy},</if>
-            <if test="createTime != null">#{createTime},</if>
-            <if test="updateBy != null">#{updateBy},</if>
-            <if test="updateTime != null">#{updateTime},</if>
-            <if test="remark != null">#{remark},</if>
-        </trim>
+    <insert id="batchInsertRules" parameterType="java.util.List">
+        insert into archive_appraisal_rule (
+        rule_id, qzh, category_code, parent_id, clause_no, parent_path_text,
+        clause_text, full_merged_text, retention_period, sort_order, create_time
+        ) values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (
+            #{item.ruleId}, #{item.qzh}, #{item.categoryCode}, #{item.parentId}, #{item.clauseNo},
+            #{item.parentPathText}, #{item.clauseText}, #{item.fullMergedText}, #{item.retentionPeriod},
+            #{item.sortOrder}, sysdate()
+            )
+        </foreach>
     </insert>
 
-    <update id="updateRule" parameterType="ArchiveAppraisalRule">
-        UPDATE ARCHIVE_APPRAISAL_RULE
+    <delete id="deleteRulesByQzhAndCategory">
+        delete from archive_appraisal_rule
+        where qzh = #{qzh} and category_code = #{categoryCode}
+    </delete>
+
+    <delete id="deleteRuleById" parameterType="String">
+        delete from archive_appraisal_rule where rule_id = #{ruleId}
+    </delete>
+
+    <delete id="deleteRulesByQzh" parameterType="String">
+        delete from archive_appraisal_rule where qzh = #{qzh}
+    </delete>
+
+    <select id="selectArchiveAppraisalRuleById" parameterType="String" resultMap="ArchiveAppraisalRuleResult">
+        <include refid="selectRuleVo"/>
+        where rule_id = #{ruleId}
+    </select>
+
+    <insert id="insertArchiveAppraisalRule" parameterType="ArchiveAppraisalRule">
+        insert into archive_appraisal_rule (
+            rule_id,
+            qzh,
+            category_code,
+            parent_id,
+            clause_no,
+            parent_path_text,
+            clause_text,
+            full_merged_text,
+            retention_period,
+            document_types,
+            event_keywords,
+            process_status,
+            sort_order,
+            create_by,
+            create_time,
+            update_by,
+            update_time
+        ) values (
+                     #{ruleId},
+                     #{qzh},
+                     #{categoryCode},
+                     #{parentId},
+                     #{clauseNo},
+                     #{parentPathText},
+                     #{clauseText},
+                     #{fullMergedText},
+                     #{retentionPeriod},
+                     #{documentTypes},
+                     #{eventKeywords},
+                     #{processStatus},
+                     #{sortOrder},
+                     #{createBy},
+                     sysdate(),
+                     #{updateBy},
+                     sysdate()
+                 )
+    </insert>
+
+    <update id="updateArchiveAppraisalRule" parameterType="ArchiveAppraisalRule">
+        update archive_appraisal_rule
         <trim prefix="SET" suffixOverrides=",">
-            <if test="unitId != null">unitid = #{unitId},</if>
-            <if test="unitCode != null">UNIT_CODE = #{unitCode},</if>
-            <if test="categoryL1 != null">CATEGORY_L1 = #{categoryL1},</if>
-            <if test="categoryL2 != null">CATEGORY_L2 = #{categoryL2},</if>
-            <if test="clauseNo != null">CLAUSE_NO = #{clauseNo},</if>
-            <if test="clauseText != null">CLAUSE_TEXT = #{clauseText},</if>
-            <if test="retentionPeriod != null">RETENTION_PERIOD = #{retentionPeriod},</if>
-            <if test="documentTypes != null">DOCUMENT_TYPES = #{documentTypes},</if>
-            <if test="eventKeywords != null">EVENT_KEYWORDS = #{eventKeywords},</if>
-            <if test="excludedTypes != null">EXCLUDED_TYPES = #{excludedTypes},</if>
-            <if test="excludedKeywords != null">EXCLUDED_KEYWORDS = #{excludedKeywords},</if>
-            <if test="priority != null">PRIORITY = #{priority},</if>
-            <if test="status != null">STATUS = #{status},</if>
-            <if test="updateBy != null">UPDATE_BY = #{updateBy},</if>
-            <if test="updateTime != null">UPDATE_TIME = #{updateTime},</if>
-            <if test="remark != null">REMARK = #{remark},</if>
+            <if test="qzh != null and qzh != ''">qzh = #{qzh},</if>
+            <if test="categoryCode != null and categoryCode != ''">category_code = #{categoryCode},</if>
+            <if test="parentId != null and parentId != ''">parent_id = #{parentId},</if>
+            <if test="clauseNo != null">clause_no = #{clauseNo},</if>
+            <if test="parentPathText != null">parent_path_text = #{parentPathText},</if>
+            <if test="clauseText != null and clauseText != ''">clause_text = #{clauseText},</if>
+            <if test="fullMergedText != null">full_merged_text = #{fullMergedText},</if>
+            <if test="retentionPeriod != null">retention_period = #{retentionPeriod},</if>
+            <if test="documentTypes != null">document_types = #{documentTypes},</if>
+            <if test="eventKeywords != null">event_keywords = #{eventKeywords},</if>
+            <if test="processStatus != null">process_status = #{processStatus},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
         </trim>
-        WHERE RULE_ID = #{ruleId}
+        where rule_id = #{ruleId}
     </update>
-
-    <delete id="deleteRuleById" parameterType="Long">
-        DELETE FROM ARCHIVE_APPRAISAL_RULE WHERE RULE_ID = #{ruleId}
-    </delete>
-
-    <delete id="deleteRuleByIds" parameterType="String">
-        DELETE FROM ARCHIVE_APPRAISAL_RULE WHERE RULE_ID in
-        <foreach item="ruleId" collection="array" open="(" separator="," close=")">
-            #{ruleId}
-        </foreach>
-    </delete>
-
 
 </mapper>

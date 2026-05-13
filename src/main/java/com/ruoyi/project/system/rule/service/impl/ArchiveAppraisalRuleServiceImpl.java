@@ -1,32 +1,33 @@
 package com.ruoyi.project.system.rule.service.impl;
 
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
+import com.ruoyi.common.utils.uuid.UUID;
 import com.ruoyi.common.utils.StringUtils;
-import com.ruoyi.project.system.titansort.service.IArchiveCategoryService;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
-import org.apache.poi.extractor.POITextExtractor;
-import org.apache.poi.ooxml.extractor.ExtractorFactory;
-import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
-import org.apache.poi.xwpf.usermodel.XWPFDocument;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.*;
-import org.springframework.stereotype.Service;
-import com.ruoyi.common.utils.DateUtils;
-import com.ruoyi.common.utils.security.ShiroUtils;
-import com.ruoyi.common.utils.text.Convert;
+import com.ruoyi.common.utils.text.Convert; // ✅ 修复了报错的导包
 import com.ruoyi.project.system.rule.domain.ArchiveAppraisalRule;
 import com.ruoyi.project.system.rule.mapper.ArchiveAppraisalRuleMapper;
 import com.ruoyi.project.system.rule.service.IArchiveAppraisalRuleService;
+
+import java.io.InputStream;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.ruoyi.project.system.titansort.domain.ArchiveCategory;
+import com.ruoyi.project.system.titansort.mapper.ArchiveCategoryMapper;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.hwpf.HWPFDocument;
+import org.apache.poi.hwpf.usermodel.Range;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
+import org.apache.poi.xwpf.usermodel.XWPFTableCell;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -34,235 +35,380 @@ public class ArchiveAppraisalRuleServiceImpl implements IArchiveAppraisalRuleSer
 
     @Autowired
     private ArchiveAppraisalRuleMapper ruleMapper;
-
     @Autowired
-    private IArchiveCategoryService archiveCategoryService;
+    private ArchiveCategoryMapper archiveCategoryMapper;
 
+    // 识别末尾各种括号内的法定保管期限：如 (永久), （30年）, 永久, 10年 等
+    private static final Pattern RETENTION_PATTERN = Pattern.compile("[(（]?\\s*(永久|\\d+年)\\s*[)）]?$");
+
+    // ==================== 严格映射用户设计的文书档案 6 级正则表达式 ====================
+    // L3: 中文大写括号标号，如 （一）会议文件
+    private static final Pattern L3_PATTERN = Pattern.compile("^[(（][一二三四五六七八九十]+[)）]");
+    // L4: 单数字标号，如 1 本馆内部会议
+    private static final Pattern L4_PATTERN = Pattern.compile("^\\d+([、.\\s]|$)");
+    // L5: 双层数字标号，如 1.1 党支部委员会会议记录
+    private static final Pattern L5_PATTERN = Pattern.compile("^\\d+\\.\\d+([\\s]|$)");
+    // L6: 三层数字标号，如 4.1.1 请示、批复、通知
+    private static final Pattern L6_PATTERN = Pattern.compile("^\\d+\\.\\d+\\.\\d+([\\s]|$)");
+    // 识别末尾小括号内的法定保管期限：如 (永久), （30年）, (10年)
+    // 🚀 新增：噪声黑名单过滤正则（严格屏蔽表头、大纲标题、落款等无编号系统行）
+
+    private static final Pattern NOISE_BLACKLIST = Pattern.compile(
+            "^(序号|归档范围|保管期限|备注|各门类文件材料|机关档案分类方案|.*档案馆办公室.*|.*印发)$"
+    );
     @Override
     public List<ArchiveAppraisalRule> selectRuleList(ArchiveAppraisalRule rule) {
         return ruleMapper.selectRuleList(rule);
     }
 
     @Override
-    public ArchiveAppraisalRule selectRuleById(Long ruleId) {
-        return ruleMapper.selectRuleById(ruleId);
-    }
-
-    @Override
-    public int insertRule(ArchiveAppraisalRule rule) {
-        rule.setCreateTime(DateUtils.getNowDate());
-        rule.setCreateBy(ShiroUtils.getLoginName());
-        return ruleMapper.insertRule(rule);
-    }
-
-    @Override
-    public int updateRule(ArchiveAppraisalRule rule) {
-        rule.setUpdateTime(DateUtils.getNowDate());
-        rule.setUpdateBy(ShiroUtils.getLoginName());
-        return ruleMapper.updateRule(rule);
-    }
-
-    /**
-     * 批量删除智能鉴定规则
-     * * @param ids 需要删除的数据ID以逗号拼接
-     * @return 影响行数
-     */
-    @Override
-    public int deleteRuleByIds(String ids) {
-        // Convert.toStrArray 会将 "id1,id2" 转换成 String[] {"id1", "id2"}
-        return ruleMapper.deleteRuleByIds(Convert.toStrArray(ids));
-    }
-
-
-    /**
-     * 核心业务：全文档智能分块解析与入库 (无伪代码生产版)
-     */
-    @Override
     @Transactional(rollbackFor = Exception.class)
-    public String importRuleData(MultipartFile file, String unitId) throws Exception {
-/*
-        if (file == null || file.isEmpty()) throw new Exception("上传的文件不能为空！");
+    public int importRuleDocument(String qzh, MultipartFile file, String createBy) throws Exception {
         String fileName = file.getOriginalFilename();
+        if (StringUtils.isEmpty(fileName)) {
+            throw new RuntimeException("上传文件名称为空");
+        }
 
-        String fullText = extractTextFromFile(file);
-        if (StringUtils.isBlank(fullText)) throw new Exception("未能提取到有效文字。");
+        // 1. 获取单位预置的一级分类底图列表
+        ArchiveCategory queryParam = new ArchiveCategory();
+        queryParam.setUnitId(qzh);
+        queryParam.setCategoryLevel(1);
+        List<ArchiveCategory> categories = archiveCategoryMapper.selectArchiveCategoryTreeList(queryParam);
 
-        // ====== 1. 数据清洗与精准截取 (你的神仙思路) ======
-        int startIndex = fullText.indexOf("二、各门类文件材料归档范围和档案保管期限");
-        int endIndex = fullText.indexOf("三、附则");
+        if (categories == null || categories.isEmpty()) {
+            throw new RuntimeException("该单位尚未在系统中初始化任何一级分类底图，无法自动映射归属门类");
+        }
 
-        if (startIndex != -1) {
-            if (endIndex != -1 && endIndex > startIndex) {
-                fullText = fullText.substring(startIndex, endIndex);
+        // 2. 抽取底层文档内容流
+        List<String> rawLines = new ArrayList<>();
+        try (InputStream is = file.getInputStream()) {
+            String lowerName = fileName.toLowerCase();
+            if (lowerName.endsWith(".doc")) {
+                rawLines = extractDocText(is);
+            } else if (lowerName.endsWith(".docx")) {
+                rawLines = extractDocxText(is);
+            } else if (lowerName.endsWith(".xls") || lowerName.endsWith(".xlsx")) {
+                rawLines = extractExcelText(is, lowerName.endsWith(".xlsx"));
             } else {
-                fullText = fullText.substring(startIndex);
+                throw new RuntimeException("不支持的文件格式，仅允许传入 Word 或 Excel 文件");
             }
         }
 
-        // ====== 2. 文本分块 (缩小切块，降低单次推理压力) ======
-        List<String> textChunks = new ArrayList<>();
-        String[] lines = fullText.split("\n");
-        StringBuilder currentChunk = new StringBuilder();
+        if (rawLines.isEmpty()) {
+            throw new RuntimeException("未能从文件中解析出有效规则内容，请核对原件排版规律");
+        }
 
-        for (String line : lines) {
-            currentChunk.append(line).append("\n");
-            // 【调优点】：字数降到 1000 左右一块，保证大模型能在 60 秒内迅速吐出结果
-            if (currentChunk.length() >= 1000) {
-                textChunks.add(currentChunk.toString());
-                currentChunk.setLength(0);
+        // 3. 执行强覆盖前置防御：清除目标全宗下所有旧的混合数据
+        ruleMapper.deleteRulesByQzh(qzh);
+
+        // 4. 🧠 严格匹配 6 级体系架构的状态机处理核心
+        List<ArchiveAppraisalRule> readyToInsertList = new ArrayList<>();
+        // Key为节点深度(2-6)，Value为对应深度的最新规则对象快照
+        Map<Integer, ArchiveAppraisalRule> contextStack = new HashMap<>();
+
+        // 核心标记位：是否已越过前置非业务内容区
+        boolean startParsing = false;
+        String currentCategoryCode = "";
+        int currentSort = 1;
+
+        ArchiveAppraisalRule pendingStitchRule = null;
+
+        for (String line : rawLines) {
+            if (StringUtils.isBlank(line)) { continue; }
+            String cleanLine = line.trim();
+
+            // -----------------------------------------------------------------
+            // 闸门探测：寻找开始解析的绝对标志
+            // -----------------------------------------------------------------
+            if (!startParsing) {
+                // 命中图示要求的开始标志
+                if (cleanLine.contains("各门类文件材料归档范围和档案保管期限")) {
+                    startParsing = true;
+                }
+                continue; // 标志行自身及之前的内容直接过滤跳过
             }
-        }
-        if (currentChunk.length() > 50) {
-            textChunks.add(currentChunk.toString());
-        }
 
-        // ====== 3. 稳健的串行调用 (Serial Execution) ======
-        List<ArchiveAppraisalRule> allParsedRules = new ArrayList<>(); // 串行不需要线程安全的集合了
-        int currentChunkIndex = 1;
-
-        for (String chunk : textChunks) {
-            System.out.println(">>> 正在串行发送第 " + currentChunkIndex + "/" + textChunks.size() + " 块给大模型...");
-
-            // 串行调用大模型提取规则
-            processTextChunk(chunk, allParsedRules);
-
-            // 【大白话】：每处理完一块，让 Java 睡 1 秒，给大模型服务器喘口气
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            // -----------------------------------------------------------------
+            // 强力去噪过滤层
+            // -----------------------------------------------------------------
+            String compactLine = cleanLine.replaceAll("\\s+", "");
+            if (NOISE_BLACKLIST.matcher(compactLine).find() || compactLine.startsWith("序号归档范围")) {
+                continue;
             }
-            currentChunkIndex++;
-        }
 
-        // ====== 4. 汇总并批量入库 ======
-        int successCount = 0;
-        for (ArchiveAppraisalRule rule : allParsedRules) {
-            rule.setRuleId(System.nanoTime() + successCount);
-            rule.setUnitId(unitId);
-            rule.setStatus("0");
-
-            if(StringUtils.isBlank(rule.getCategoryL1())) rule.setCategoryL1("未分类");
-            if(StringUtils.isBlank(rule.getRetentionPeriod())) rule.setRetentionPeriod("10年");
-            if(rule.getPriority() == null) rule.setPriority(5);
-
-            this.insertRule(rule);
-            successCount++;
-        }*/
-
-        if (file == null || file.isEmpty()) {
-            throw new Exception("导入文件不能为空！");
-        }
-
-        // 转发文件流和所属单位ID，交由专业的分类引擎进行多级自关联解析与入库
-        archiveCategoryService.importWordCategoryTable(file, unitId);
-
-        return "解析完毕！";//文件核心内容共切分为 " + textChunks.size() + " 块串行处理，成功入库 " + successCount + " 条真实规则。
-    }
-
-    /**
-     * 工具方法：处理单个文本块，调用大模型并解析 JSON
-     */
-    private void processTextChunk(String textChunk, List<ArchiveAppraisalRule> allParsedRules) {
-        // 严格的 Prompt 设计，告诉 AI 忽略目录、序言等无关废话
-        String systemPrompt = "你是一个档案业务专家。请从以下文本中提取保管期限条款。如果文本中包含真实的条款（如“永久”、“30年”、“10年”），请务必严格按JSON数组格式返回；如果该段文本是序言、目录或无关内容，请直接返回空的数组 []。字段要求：categoryL1(一级门类,如WS/KU), categoryL2(二级门类), clauseNo(条款号), clauseText(条款原文), retentionPeriod(保管期限:永久/30年/10年), documentTypes(适用文种,用逗号分隔), eventKeywords(事由关键词,用逗号分隔), priority(优先级数字1-10)。";
-
-        try {
-            String jsonResponse = callQwenModel(systemPrompt, textChunk);
-
-            if (StringUtils.isNotBlank(jsonResponse) && !jsonResponse.trim().equals("[]")) {
-                // 将大模型返回的 JSON 数组转化为实体类集合
-                List<ArchiveAppraisalRule> chunkRules = JSON.parseArray(jsonResponse, ArchiveAppraisalRule.class);
-                if (chunkRules != null) {
-                    allParsedRules.addAll(chunkRules);
+            // -----------------------------------------------------------------
+            // 探针一：一级分类识别感知 (L1 顶级父节点)
+            // -----------------------------------------------------------------
+            boolean isL1CategoryHeader = false;
+            for (ArchiveCategory cat : categories) {
+                // 比对类似 "（一）文书档案" 文本
+                if (cleanLine.contains(cat.getCategoryName()) || cleanLine.contains(cat.getCategoryCode())) {
+                    currentCategoryCode = cat.getCategoryCode();
+                    isL1CategoryHeader = true;
+                    contextStack.clear(); // 切换大类，清空栈上下文
+                    pendingStitchRule = null;
+                    break;
                 }
             }
-        } catch (Exception e) {
-            // 【专业术语】：容错隔离。某个块解析失败（如大模型抽风返回了非JSON），记录日志但跳过，不阻断整个文件的解析。
-            System.err.println("该文本块大模型解析失败，跳过: " + e.getMessage());
+            // 顶级分类标题行不作为独立规则实体落盘
+            if (isL1CategoryHeader) { continue; }
+
+            // 防御拦截：如果尚无法推算当前所属大类，暂时略过不规范行
+            if (StringUtils.isEmpty(currentCategoryCode)) { continue; }
+
+            // -----------------------------------------------------------------
+            // 探针二：判定当前行在定制架构图中的绝对层级深度 (Level 2 ~ 6)
+            // -----------------------------------------------------------------
+            int currentLevel = resolveWSLevel(cleanLine);
+            String clauseNo = extractWSClauseNo(cleanLine, currentLevel);
+
+            // -----------------------------------------------------------------
+            // 探针三：跨页/断行向前自动缝合修复 (Forward Stitching)
+            // -----------------------------------------------------------------
+            // 如果被归入默认的 L2 适用部门层，但实际上它没有大类通用特征，且前序存在待补全叶子节点
+            if (currentLevel == 2 && pendingStitchRule != null) {
+                Matcher retMatcher = RETENTION_PATTERN.matcher(cleanLine);
+                if (retMatcher.find()) {
+                    pendingStitchRule.setRetentionPeriod(retMatcher.group(1));
+                    cleanLine = cleanLine.substring(0, retMatcher.start()).trim();
+                }
+
+                String updatedClause = pendingStitchRule.getClauseText() + " " + cleanLine;
+                pendingStitchRule.setClauseText(updatedClause);
+
+                String pPath = pendingStitchRule.getParentPathText();
+                if (pPath != null && pPath.contains(" / ")) {
+                    String baseParentPath = pPath.substring(0, pPath.lastIndexOf(" / "));
+                    pendingStitchRule.setParentPathText(baseParentPath + " / " + updatedClause);
+                    pendingStitchRule.setFullMergedText(baseParentPath + " / " + updatedClause);
+                } else {
+                    pendingStitchRule.setFullMergedText(updatedClause);
+                }
+                continue;
+            }
+
+            // 常规期限与正文抽取
+            String retentionPeriod = "";
+            Matcher retMatcher = RETENTION_PATTERN.matcher(cleanLine);
+            if (retMatcher.find()) {
+                retentionPeriod = retMatcher.group(1);
+                cleanLine = cleanLine.substring(0, retMatcher.start()).trim();
+            }
+
+            String clauseText = cleanLine;
+            if (StringUtils.isNotEmpty(clauseNo) && cleanLine.startsWith(clauseNo)) {
+                clauseText = cleanLine.substring(clauseNo.length()).trim();
+                clauseText = clauseText.replaceAll("^[、.\\s]+", "");
+            }
+
+            // 构建新规则实体
+            ArchiveAppraisalRule rule = new ArchiveAppraisalRule();
+            rule.setRuleId(UUID.randomUUID().toString());
+            rule.setQzh(qzh);
+            rule.setCategoryCode(currentCategoryCode);
+            rule.setClauseNo(clauseNo);
+            rule.setClauseText(clauseText);
+            rule.setRetentionPeriod(retentionPeriod);
+            rule.setSortOrder(currentSort++);
+            rule.setProcessStatus(0);
+            rule.setCreateBy(createBy);
+            rule.setUpdateBy(createBy);
+
+            // -----------------------------------------------------------------
+            // 🧠 核心祖先关联树绑定逻辑：严格沿 L6 -> L2 链路向上寻找直系血缘
+            // -----------------------------------------------------------------
+            ArchiveAppraisalRule parentRule = null;
+            for (int pLevel = currentLevel - 1; pLevel >= 2; pLevel--) {
+                if (contextStack.containsKey(pLevel)) {
+                    parentRule = contextStack.get(pLevel);
+                    break;
+                }
+            }
+
+            if (parentRule != null) {
+                rule.setParentId(parentRule.getRuleId());
+                String pPath = parentRule.getParentPathText();
+                String inheritedPath = StringUtils.isEmpty(pPath) ? parentRule.getClauseText()
+                        : pPath + " / " + parentRule.getClauseText();
+                rule.setParentPathText(inheritedPath);
+            } else {
+                rule.setParentId("0"); // 无前置匹配则自动挂载为顶层 L2 适用部门根级
+                rule.setParentPathText("");
+            }
+
+            String fullMerged = StringUtils.isEmpty(rule.getParentPathText()) ? rule.getClauseText()
+                    : rule.getParentPathText() + " / " + rule.getClauseText();
+            rule.setFullMergedText(fullMerged);
+
+            readyToInsertList.add(rule);
+
+            // 刷新活动上下文层级栈
+            contextStack.put(currentLevel, rule);
+            for (int clearLevel = currentLevel + 1; clearLevel <= 6; clearLevel++) {
+                contextStack.remove(clearLevel);
+            }
+
+            // 叶子缝合标记追踪
+            if (StringUtils.isEmpty(retentionPeriod) && currentLevel >= 4) {
+                pendingStitchRule = rule;
+            } else {
+                pendingStitchRule = null;
+            }
         }
+
+        if (!readyToInsertList.isEmpty()) {
+            return ruleMapper.batchInsertRules(readyToInsertList);
+        }
+        return 0;
     }
 
-    // ================= 以下为底层工具方法 (当前留空等待你的信息) =================
-
-    /**
-     * 工具方法 1：从文件中抽取纯文本 (优化版)
-     */
-    private String extractTextFromFile(MultipartFile file) throws Exception {
-        String fileName = file.getOriginalFilename().toLowerCase();
-        StringBuilder text = new StringBuilder();
-
-        try (InputStream is = file.getInputStream()) {
-            if (fileName.endsWith(".pdf")) {
-                // PDF 解析逻辑保持不变
-                PDDocument document = PDDocument.load(is);
-                PDFTextStripper stripper = new PDFTextStripper();
-                text.append(stripper.getText(document));
-                document.close();
-            }
-            else if (fileName.endsWith(".doc") || fileName.endsWith(".docx")) {
-                // 【高级写法】：Word 全系大一统解析
-                // 交给 POI 的提取器工厂自动判断并解析
-                POITextExtractor extractor = ExtractorFactory.createExtractor(is);
-                text.append(extractor.getText());
-                extractor.close();
-            }
-            else {
-                throw new Exception("不支持的文件格式，仅支持 PDF、DOCX、DOC");
-            }
+    @Override
+    public int deleteRuleByIds(String ids) {
+        String[] ruleIds = Convert.toStrArray(ids);
+        int count = 0;
+        for (String id : ruleIds) {
+            count += ruleMapper.deleteRuleById(id);
         }
-        return text.toString();
+        return count;
     }
 
     /**
-     * 工具方法：调用 OpenAI 标准接口 (保留你的高容忍度配置)
+     * 精准判定当前行符合定制架构的哪一层级 (Level 2 ~ 6)
      */
-    private String callQwenModel(String systemPrompt, String documentText) throws Exception {
-        String apiUrl = "http://172.23.16.126:80/v1/chat/completions";
-//        String apiUrl = "http://127.0.0.1:8045/v1/chat/completions";
-        String apiKey = "sk-c149638004e04ecc85b9f35abe0db78e";
-//        String modelName = "gemini-3.1-pro-high";//claude-opus-4-6-thinking
-        String modelName = "qwen";
+    private int resolveWSLevel(String text) {
+        // L6: 4.1.1 结构
+        if (L6_PATTERN.matcher(text).find()) return 6;
+        // L5: 1.1 结构
+        if (L5_PATTERN.matcher(text).find()) return 5;
+        // L4: 1 结构
+        if (L4_PATTERN.matcher(text).find()) return 4;
+        // L3: （一） 结构
+        if (L3_PATTERN.matcher(text).find()) return 3;
 
-        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(15000);
-        factory.setReadTimeout(180000);
-        RestTemplate restTemplate = new RestTemplate(factory);
+        // 没有任何上述明显的标号特征，判定为 L2 适用部门分类节点（如“各部门共有部分”）
+        return 2;
+    }
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", apiKey);
-
-        JSONObject payload = new JSONObject();
-        payload.put("model", modelName);
-        payload.put("temperature", 0.0); // 降为 0.0，追求绝对的规则严谨性
-
-        JSONArray messages = new JSONArray();
-        JSONObject systemMsg = new JSONObject();
-        systemMsg.put("role", "system");
-        systemMsg.put("content", systemPrompt);
-
-        JSONObject userMsg = new JSONObject();
-        userMsg.put("role", "user");
-        userMsg.put("content", "文本内容如下：\n" + documentText);
-
-        messages.add(systemMsg);
-        messages.add(userMsg);
-        payload.put("messages", messages);
-
-        System.out.println("本次调用ai内容如下：\n"+payload.toString());
-
-        HttpEntity<String> requestEntity = new HttpEntity<>(payload.toJSONString(), headers);
-        ResponseEntity<String> response = restTemplate.exchange(apiUrl, HttpMethod.POST, requestEntity, String.class);
-
-        System.out.println("ai响应结果：\n"+response.getBody());
-        if (response.getStatusCode() == HttpStatus.OK) {
-            JSONObject resJson = JSON.parseObject(response.getBody());
-            String aiContent = resJson.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content");
-            aiContent = aiContent.replace("```json", "").replace("```", "").trim();
-            return aiContent;
-        } else {
-            throw new Exception("HTTP 请求失败");
+    /**
+     * 提取匹配层级的前缀标号
+     */
+    private String extractWSClauseNo(String text, int level) {
+        Matcher m = null;
+        switch (level) {
+            case 6: m = L6_PATTERN.matcher(text); break;
+            case 5: m = L5_PATTERN.matcher(text); break;
+            case 4: m = L4_PATTERN.matcher(text); break;
+            case 3: m = L3_PATTERN.matcher(text); break;
+            case 2: return ""; // L2 层无特定数字标号前缀
         }
+        if (m != null && m.find()) {
+            return m.group(0).trim();
+        }
+        return "";
+    }
+
+    // =========================================================================
+    // 🗂️ Word/Excel 抽取器适配实现 (保持平铺智能表格遍历)
+    // =========================================================================
+
+    private List<String> extractDocxText(InputStream is) throws Exception {
+        List<String> lines = new ArrayList<>();
+        XWPFDocument doc = new XWPFDocument(is);
+
+        // 先读取普通段落文本
+        for (XWPFParagraph p : doc.getParagraphs()) {
+            String text = p.getText().trim();
+            if (StringUtils.isNotBlank(text)) {
+                lines.add(text);
+            }
+        }
+
+        // 读取文档内嵌的表格矩阵
+        for (XWPFTable table : doc.getTables()) {
+            for (XWPFTableRow row : table.getRows()) {
+                StringBuilder rowStr = new StringBuilder();
+                boolean isHeaderRow = false;
+
+                for (XWPFTableCell cell : row.getTableCells()) {
+                    String cellText = cell.getText().trim();
+                    cellText = cellText.replaceAll("[\\r\\n]+", " ");
+                    rowStr.append(cellText).append(" ");
+                }
+
+                String finalRowStr = rowStr.toString().trim();
+                String compact = finalRowStr.replaceAll("\\s+", "");
+                if (compact.startsWith("序号归档范围") || compact.equals("序号归档范围保管期限备注")) {
+                    isHeaderRow = true;
+                }
+
+                if (!isHeaderRow && StringUtils.isNotBlank(finalRowStr)) {
+                    lines.add(finalRowStr);
+                }
+            }
+        }
+        return lines;
+    }
+
+    private List<String> extractDocText(InputStream is) throws Exception {
+        List<String> lines = new ArrayList<>();
+        HWPFDocument doc = new HWPFDocument(is);
+        Range range = doc.getRange();
+        for (int i = 0; i < range.numParagraphs(); i++) {
+            String text = range.getParagraph(i).text();
+            if (StringUtils.isNotBlank(text)) {
+                lines.add(text.replaceAll("[\\r\\n\\u0007]", "").trim());
+            }
+        }
+        return lines;
+    }
+
+    private List<String> extractExcelText(InputStream is, boolean isXlsx) throws Exception {
+        List<String> lines = new ArrayList<>();
+        Workbook wb = isXlsx ? new XSSFWorkbook(is) : new HSSFWorkbook(is);
+        Sheet sheet = wb.getSheetAt(0);
+
+        for (Row row : sheet) {
+            StringBuilder rowStr = new StringBuilder();
+            for (int i = 0; i < row.getLastCellNum(); i++) {
+                Cell cell = row.getCell(i, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                cell.setCellType(CellType.STRING);
+                String val = cell.getStringCellValue().trim();
+                if (StringUtils.isNotBlank(val)) {
+                    rowStr.append(val).append(" ");
+                }
+            }
+            if (StringUtils.isNotBlank(rowStr.toString())) {
+                lines.add(rowStr.toString().trim());
+            }
+        }
+        wb.close();
+        return lines;
+    }
+
+    /**
+     * 查询规则单条实体
+     */
+    @Override
+    public ArchiveAppraisalRule selectArchiveAppraisalRuleById(String ruleId) {
+        // 调度底层 Mapper 的精准主键查询
+        return ruleMapper.selectArchiveAppraisalRuleById(ruleId);
+    }
+
+    /**
+     * 新增保存单条规则
+     */
+    @Override
+    public int insertArchiveAppraisalRule(ArchiveAppraisalRule rule) {
+        // 若依标准单表插入透传
+        return ruleMapper.insertArchiveAppraisalRule(rule);
+    }
+
+    /**
+     * 更新覆盖单条规则
+     */
+    @Override
+    public int updateArchiveAppraisalRule(ArchiveAppraisalRule rule) {
+        // 若依标准单表动态更新透传 (仅更新非空字段)
+        return ruleMapper.updateArchiveAppraisalRule(rule);
     }
 }

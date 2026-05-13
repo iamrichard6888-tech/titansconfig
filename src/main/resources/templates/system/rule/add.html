@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <th:block th:include="include :: header('新增鉴定条款')" />
+  <style>
+    body { background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; color: #1d1d1f; }
+    .form-container { padding: 25px 35px; }
+    .apple-form-group { margin-bottom: 22px; }
+    .apple-label { font-size: 13px; font-weight: 600; color: #86868b; margin-bottom: 8px; display: block; text-transform: uppercase; }
+
+    /* 定制化输入组件族 */
+    .apple-input, .apple-select, .apple-textarea {
+      width: 100%; border: 1px solid #d2d2d7; border-radius: 8px; padding: 10px 14px;
+      font-size: 14px; color: #1d1d1f; background-color: #f5f5f7; outline: none;
+      transition: all 0.2s ease; box-sizing: border-box; line-height: 1.4;
+    }
+    .apple-input:focus, .apple-select:focus, .apple-textarea:focus {
+      border-color: #007aff; background-color: #ffffff; box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+    }
+    .apple-textarea { resize: vertical; min-height: 90px; }
+
+    .input-hint { font-size: 12px; color: #a1a1a6; margin-top: 5px; font-weight: 500; }
+
+    /* 并排布局支持 */
+    .form-row { display: flex; gap: 20px; }
+    .form-col { flex: 1; }
+  </style>
+</head>
+<body>
+<div class="form-container">
+  <form class="form-horizontal" id="form-rule-add">
+    <input type="hidden" name="qzh" th:value="${unitId}"/>
+    <input type="hidden" name="parentId" value="0"/>
+
+    <div class="form-row">
+      <div class="form-col">
+        <div class="apple-form-group">
+          <label class="apple-label">归属档案门类</label>
+          <select name="categoryCode" class="apple-select" required>
+            <option value="">请选择门类代号...</option>
+            <option value="WS" th:selected="${categoryCode == 'WS'}">文书档案 (WS)</option>
+            <option value="KJ" th:selected="${categoryCode == 'KJ'}">科技档案 (KJ)</option>
+            <option value="SW" th:selected="${categoryCode == 'SW'}">实物档案 (SW)</option>
+            <option value="ZP" th:selected="${categoryCode == 'ZP'}">照片档案 (ZP)</option>
+            <option value="LY" th:selected="${categoryCode == 'LY'}">录音录像档案 (LY)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-col">
+        <div class="apple-form-group">
+          <label class="apple-label">法定保管期限</label>
+          <select name="retentionPeriod" class="apple-select">
+            <option value="永久">永久</option>
+            <option value="30年">30年</option>
+            <option value="10年">10年</option>
+            <option value="">[无期限/纯结构目录]</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-col" style="flex: 0 0 160px;">
+        <div class="apple-form-group">
+          <label class="apple-label">条款编号 (选填)</label>
+          <input type="text" name="clauseNo" class="apple-input" placeholder="如: 1.1"/>
+        </div>
+      </div>
+      <div class="form-col">
+        <div class="apple-form-group">
+          <label class="apple-label">物理显示顺位</label>
+          <input type="number" name="sortOrder" class="apple-input" value="10" required/>
+        </div>
+      </div>
+    </div>
+
+    <div class="apple-form-group">
+      <label class="apple-label">上级血缘追溯前缀 (构建导航与大类划分的关键)</label>
+      <input type="text" name="parentPathText" class="apple-input" placeholder="例如: 综合管理类 / 各部门共有部分 / （一） 会议文件"/>
+      <div class="input-hint">若本条款属于多级导航下的深层细项，请在此填入完整祖先路径，层级间以“ / ”间隔</div>
+    </div>
+
+    <div class="apple-form-group">
+      <label class="apple-label">条款核心内容正文</label>
+      <textarea name="clauseText" class="apple-textarea" placeholder="在此键入具体的归档材料名称或规则事项描述..." required></textarea>
+    </div>
+  </form>
+</div>
+
+<th:block th:include="include :: footer" />
+<script th:inline="javascript">
+  var prefix = ctx + "system/rule";
+
+  // 启用前台原生校验防御机制
+  $("#form-rule-add").validate({ focusCleanup: true });
+
+  /**
+   * 🧠 重写底层提交通道：杜绝原生方法查找父级Table引发的致命异常
+   */
+  function submitHandler() {
+    if ($.validate.form()) {
+      $.modal.loading("正在安全写入底层规则图谱...");
+      $.ajax({
+        url: prefix + "/add",
+        type: "POST",
+        data: $('#form-rule-add').serialize(),
+        success: function(result) {
+          $.modal.closeLoading();
+          if (result.code == 0 || result.code == 200) {
+            $.modal.msgSuccess("规则落地成功！");
+            // 🚀 核心协同联动：直接跨域调度主界面的数据流式重新捕获
+            parent.loadRuleData();
+            setTimeout(function(){ $.modal.close(); }, 1000);
+          } else {
+            $.modal.msgError(result.msg || "保存遭遇未明挫折");
+          }
+        },
+        error: function() {
+          $.modal.closeLoading();
+          $.modal.msgError("网络拥堵或服务器处理超时");
+        }
+      });
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <th:block th:include="include :: header('修改鉴定条款')" />
+  <style>
+    body { background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; color: #1d1d1f; }
+    .form-container { padding: 25px 35px; }
+    .apple-form-group { margin-bottom: 22px; }
+    .apple-label { font-size: 13px; font-weight: 600; color: #86868b; margin-bottom: 8px; display: block; text-transform: uppercase; }
+    .apple-input, .apple-select, .apple-textarea {
+      width: 100%; border: 1px solid #d2d2d7; border-radius: 8px; padding: 10px 14px;
+      font-size: 14px; color: #1d1d1f; background-color: #f5f5f7; outline: none;
+      transition: all 0.2s ease; box-sizing: border-box; line-height: 1.4;
+    }
+    .apple-input:focus, .apple-select:focus, .apple-textarea:focus {
+      border-color: #007aff; background-color: #ffffff; box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+    }
+    .apple-textarea { resize: vertical; min-height: 90px; }
+    .input-hint { font-size: 12px; color: #a1a1a6; margin-top: 5px; font-weight: 500; }
+    .form-row { display: flex; gap: 20px; }
+    .form-col { flex: 1; }
+    .id-badge { font-family: monospace; font-size: 12px; background: #f2f2f7; padding: 4px 8px; border-radius: 6px; color: #86868b; display: inline-block; margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+<div class="form-container">
+  <div class="id-badge">RULE_ID: <span th:text="${rule.ruleId}"></span></div>
+
+  <form class="form-horizontal" id="form-rule-edit" th:object="${rule}">
+    <input type="hidden" name="ruleId" th:field="*{ruleId}"/>
+    <input type="hidden" name="qzh" th:field="*{qzh}"/>
+    <input type="hidden" name="parentId" th:field="*{parentId}"/>
+
+    <div class="form-row">
+      <div class="form-col">
+        <div class="apple-form-group">
+          <label class="apple-label">归属档案门类</label>
+          <select name="categoryCode" class="apple-select" required>
+            <option value="WS" th:field="*{categoryCode}">文书档案 (WS)</option>
+            <option value="KJ" th:field="*{categoryCode}">科技档案 (KJ)</option>
+            <option value="SW" th:field="*{categoryCode}">实物档案 (SW)</option>
+            <option value="ZP" th:field="*{categoryCode}">照片档案 (ZP)</option>
+            <option value="LY" th:field="*{categoryCode}">录音录像档案 (LY)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-col">
+        <div class="apple-form-group">
+          <label class="apple-label">法定保管期限</label>
+          <select name="retentionPeriod" class="apple-select">
+            <option value="永久" th:field="*{retentionPeriod}">永久</option>
+            <option value="30年" th:field="*{retentionPeriod}">30年</option>
+            <option value="10年" th:field="*{retentionPeriod}">10年</option>
+            <option value="" th:field="*{retentionPeriod}">[无期限/纯结构目录]</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-col" style="flex: 0 0 160px;">
+        <div class="apple-form-group">
+          <label class="apple-label">条款编号</label>
+          <input type="text" name="clauseNo" class="apple-input" th:field="*{clauseNo}"/>
+        </div>
+      </div>
+      <div class="form-col">
+        <div class="apple-form-group">
+          <label class="apple-label">物理显示顺位</label>
+          <input type="number" name="sortOrder" class="apple-input" th:field="*{sortOrder}" required/>
+        </div>
+      </div>
+    </div>
+
+    <div class="apple-form-group">
+      <label class="apple-label">上级血缘追溯前缀</label>
+      <input type="text" name="parentPathText" class="apple-input" th:field="*{parentPathText}"/>
+      <div class="input-hint">完整还原的树形血缘，直接决定右侧大盘与 TOC 边栏的级联呈现形态</div>
+    </div>
+
+    <div class="apple-form-group">
+      <label class="apple-label">条款核心内容正文</label>
+      <textarea name="clauseText" class="apple-textarea" th:field="*{clauseText}" required></textarea>
+    </div>
+  </form>
+</div>
+
+<th:block th:include="include :: footer" />
+<script th:inline="javascript">
+  var prefix = ctx + "system/rule";
+  $("#form-rule-edit").validate({ focusCleanup: true });
+
+  /**
+   * 🧠 安全级更新推送通道
+   */
+  function submitHandler() {
+    if ($.validate.form()) {
+      $.modal.loading("正在更新云端知识库...");
+      $.ajax({
+        url: prefix + "/edit",
+        type: "POST",
+        data: $('#form-rule-edit').serialize(),
+        success: function(result) {
+          $.modal.closeLoading();
+          if (result.code == 0 || result.code == 200) {
+            $.modal.msgSuccess("更新生效完毕！");
+            // 调度主页面静默重绘
+            parent.loadRuleData();
+            setTimeout(function(){ $.modal.close(); }, 1000);
+          } else {
+            $.modal.msgError(result.msg || "修改合并遭遇意外拦截");
+          }
+        },
+        error: function() {
+          $.modal.closeLoading();
+          $.modal.msgError("网络断链或服务器内部宕机");
+        }
+      });
+    }
+  }
+</script>
+</body>
+</html>

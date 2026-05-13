@@ -1,137 +1,176 @@
 package com.ruoyi.project.system.rule.domain;
 
+import com.ruoyi.framework.web.domain.BaseEntity;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import com.ruoyi.framework.aspectj.lang.annotation.Excel;
-import com.ruoyi.framework.web.domain.BaseEntity;
 
 /**
- * 档案鉴定规则知识库 对象 archive_appraisal_rule
+ * 档案保管期限鉴定规则对象 archive_appraisal_rule
+ * * @author ruoyi
+ * @date 2026-05-12
  */
 public class ArchiveAppraisalRule extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
-    /** 规则ID (雪花算法ID) */
-    private Long ruleId;
-
-    /** 关联 t_DA_UNIT 单位ID */
-    @Excel(name = "单位ID")
-    private String unitId;
+    /** 规则唯一主键UUID */
+    private String ruleId;
 
     /** 全宗号 */
-    @Excel(name = "全宗号")
-    private String unitCode;
+    private String qzh;
 
-    /** 一级门类 (如 WS) */
-    @Excel(name = "一级门类")
-    private String categoryL1;
+    /** 档案门类代码 */
+    private String categoryCode;
 
-    /** 二级门类 (如 会议文件) */
-    @Excel(name = "二级门类")
-    private String categoryL2;
+    /** 父节点ID (支撑左侧Ztree无缝挂载) */
+    private String parentId;
 
-    /** 条款号 (如 1.1) */
-    @Excel(name = "条款号")
+    /** 条款最终编号 */
     private String clauseNo;
 
-    /** 条款原文 */
-    @Excel(name = "条款原文")
+    /** 完整祖先血缘路径 */
+    private String parentPathText;
+
+    /** 本级核心条款原文/目录名称 */
     private String clauseText;
 
-    /** 保管期限 (永久/30年/10年) */
-    @Excel(name = "保管期限")
+    /** 智能引擎专供全景融合文本 */
+    private String fullMergedText;
+
+    /** 保管期限 (永久/30年/10年，非叶子节点严格为空字符串) */
     private String retentionPeriod;
 
-    /** 适用文种 (逗号分隔或JSON) */
-    @Excel(name = "适用文种")
+    /** 适用文种数组 */
     private String documentTypes;
 
-    /** 事由关键词 (逗号分隔或JSON) */
-    @Excel(name = "事由关键词")
+    /** 核心事由关键词 */
     private String eventKeywords;
 
-    /** 排除文种 */
-    @Excel(name = "排除文种")
-    private String excludedTypes;
+    /** 处理状态 */
+    private Integer processStatus;
 
-    /** 排除事由 */
-    @Excel(name = "排除事由")
-    private String excludedKeywords;
+    /** 物理顺位号 */
+    private Integer sortOrder;
 
-    /** 匹配优先级 (1-10) */
-    @Excel(name = "优先级")
-    private Integer priority;
+    public String getRuleId() {
+        return ruleId;
+    }
 
-    /** 状态 (0正常 1停用) */
-    @Excel(name = "状态")
-    private String status;
+    public void setRuleId(String ruleId) {
+        this.ruleId = ruleId;
+    }
 
-    // ----- Getters 和 Setters -----
+    public String getQzh() {
+        return qzh;
+    }
 
-    public Long getRuleId() { return ruleId; }
-    public void setRuleId(Long ruleId) { this.ruleId = ruleId; }
+    public void setQzh(String qzh) {
+        this.qzh = qzh;
+    }
 
-    public String getUnitId() { return unitId; }
-    public void setUnitId(String unitId) { this.unitId = unitId; }
+    public String getCategoryCode() {
+        return categoryCode;
+    }
 
-    public String getUnitCode() { return unitCode; }
-    public void setUnitCode(String unitCode) { this.unitCode = unitCode; }
+    public void setCategoryCode(String categoryCode) {
+        this.categoryCode = categoryCode;
+    }
 
-    public String getCategoryL1() { return categoryL1; }
-    public void setCategoryL1(String categoryL1) { this.categoryL1 = categoryL1; }
+    public String getParentId() {
+        return parentId;
+    }
 
-    public String getCategoryL2() { return categoryL2; }
-    public void setCategoryL2(String categoryL2) { this.categoryL2 = categoryL2; }
+    public void setParentId(String parentId) {
+        this.parentId = parentId;
+    }
 
-    public String getClauseNo() { return clauseNo; }
-    public void setClauseNo(String clauseNo) { this.clauseNo = clauseNo; }
+    public String getClauseNo() {
+        return clauseNo;
+    }
 
-    public String getClauseText() { return clauseText; }
-    public void setClauseText(String clauseText) { this.clauseText = clauseText; }
+    public void setClauseNo(String clauseNo) {
+        this.clauseNo = clauseNo;
+    }
 
-    public String getRetentionPeriod() { return retentionPeriod; }
-    public void setRetentionPeriod(String retentionPeriod) { this.retentionPeriod = retentionPeriod; }
+    public String getParentPathText() {
+        return parentPathText;
+    }
 
-    public String getDocumentTypes() { return documentTypes; }
-    public void setDocumentTypes(String documentTypes) { this.documentTypes = documentTypes; }
+    public void setParentPathText(String parentPathText) {
+        this.parentPathText = parentPathText;
+    }
 
-    public String getEventKeywords() { return eventKeywords; }
-    public void setEventKeywords(String eventKeywords) { this.eventKeywords = eventKeywords; }
+    public String getClauseText() {
+        return clauseText;
+    }
 
-    public String getExcludedTypes() { return excludedTypes; }
-    public void setExcludedTypes(String excludedTypes) { this.excludedTypes = excludedTypes; }
+    public void setClauseText(String clauseText) {
+        this.clauseText = clauseText;
+    }
 
-    public String getExcludedKeywords() { return excludedKeywords; }
-    public void setExcludedKeywords(String excludedKeywords) { this.excludedKeywords = excludedKeywords; }
+    public String getFullMergedText() {
+        return fullMergedText;
+    }
 
-    public Integer getPriority() { return priority; }
-    public void setPriority(Integer priority) { this.priority = priority; }
+    public void setFullMergedText(String fullMergedText) {
+        this.fullMergedText = fullMergedText;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getRetentionPeriod() {
+        return retentionPeriod;
+    }
+
+    public void setRetentionPeriod(String retentionPeriod) {
+        this.retentionPeriod = retentionPeriod;
+    }
+
+    public String getDocumentTypes() {
+        return documentTypes;
+    }
+
+    public void setDocumentTypes(String documentTypes) {
+        this.documentTypes = documentTypes;
+    }
+
+    public String getEventKeywords() {
+        return eventKeywords;
+    }
+
+    public void setEventKeywords(String eventKeywords) {
+        this.eventKeywords = eventKeywords;
+    }
+
+    public Integer getProcessStatus() {
+        return processStatus;
+    }
+
+    public void setProcessStatus(Integer processStatus) {
+        this.processStatus = processStatus;
+    }
+
+    public Integer getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
+    }
 
     @Override
     public String toString() {
-        return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
-                .append("ruleId", getRuleId())
-                .append("unitId", getUnitId())
-                .append("unitCode", getUnitCode())
-                .append("categoryL1", getCategoryL1())
-                .append("categoryL2", getCategoryL2())
-                .append("clauseNo", getClauseNo())
-                .append("clauseText", getClauseText())
-                .append("retentionPeriod", getRetentionPeriod())
-                .append("documentTypes", getDocumentTypes())
-                .append("eventKeywords", getEventKeywords())
-                .append("excludedTypes", getExcludedTypes())
-                .append("excludedKeywords", getExcludedKeywords())
-                .append("priority", getPriority())
-                .append("status", getStatus())
-                .append("createBy", getCreateBy())
-                .append("createTime", getCreateTime())
-                .append("updateBy", getUpdateBy())
-                .append("updateTime", getUpdateTime())
-                .append("remark", getRemark())
-                .toString();
+        return "ArchiveAppraisalRule{" +
+                "ruleId='" + ruleId + '\'' +
+                ", qzh='" + qzh + '\'' +
+                ", categoryCode='" + categoryCode + '\'' +
+                ", parentId='" + parentId + '\'' +
+                ", clauseNo='" + clauseNo + '\'' +
+                ", parentPathText='" + parentPathText + '\'' +
+                ", clauseText='" + clauseText + '\'' +
+                ", fullMergedText='" + fullMergedText + '\'' +
+                ", retentionPeriod='" + retentionPeriod + '\'' +
+                ", documentTypes='" + documentTypes + '\'' +
+                ", eventKeywords='" + eventKeywords + '\'' +
+                ", processStatus=" + processStatus +
+                ", sortOrder=" + sortOrder +
+                '}';
     }
 }

@@ -26,7 +26,7 @@
     <sql id="selectDaUnitVo">
         SELECT UNITID, CODE, NAME, DESCRIPTION, CREATETIME, CREATEUSER,
                MODIFYTIME, MODIFYUSER, QZH, UNITCODE, UNITFULLNAME, ISLEAF,
-               UNITTYPE, DAGCODE, IPSECTION, ISRESTRICT, BUSINESSUNITNAME,LEVELORD
+               UNITTYPE, DAGCODE, IPSECTION, ISRESTRICT
         FROM T_allUNIT
     </sql>
 
@@ -37,7 +37,7 @@
             <if test="name != null and name != ''"> AND NAME LIKE concat(concat('%', #{name}), '%')</if>
             <if test="qzh != null and qzh != ''"> AND QZH = #{qzh}</if>
         </where>
-        ORDER BY to_number(LEVELORD) ASC NULLS LAST, qzh ASC
+        ORDER BY to_number(substr(code,2,3)) ASC NULLS LAST, qzh ASC
     </select>
 
     <select id="selectUnitById" parameterType="String" resultMap="DaUnitResult">

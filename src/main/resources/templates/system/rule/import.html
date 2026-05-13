@@ -124,8 +124,7 @@
                     appendLog("数据库同步完成。3秒后自动关闭此窗口...");
 
                     setTimeout(function(){
-                        parent.loadRuleData(); // 刷新父页面
-                        $.modal.close();       // 关闭弹窗
+                        $.modal.reload();       // 关闭弹窗
                     }, 3000);
                 } else {
                     appendLog("<span class='log-err'>[Error]</span> " + result.msg);
