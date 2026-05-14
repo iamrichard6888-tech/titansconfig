@@ -11,258 +11,103 @@
     }
     .apple-layout { display: flex; height: 100vh; overflow: hidden; }
 
-    /* =================================================================
-       左侧边栏与 Ztree 容器定制 (单行全宽精准贴合版)
-       ================================================================= */
+    /* 左侧边栏与 Ztree 容器定制 */
     .apple-sidebar {
-      width: 280px;
-      background: rgba(255, 255, 255, 0.7);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-right: 1px solid rgba(0, 0, 0, 0.05);
-      box-shadow: 5px 0 15px rgba(0, 0, 0, 0.04);
-      padding: 20px 10px 20px 15px;
-      overflow-y: auto;
-      flex-shrink: 0;
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
+      width: 280px; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px); border-right: 1px solid rgba(0, 0, 0, 0.05);
+      box-shadow: 5px 0 15px rgba(0, 0, 0, 0.04); padding: 20px 10px 20px 15px;
+      overflow-y: auto; flex-shrink: 0; z-index: 10; display: flex; flex-direction: column;
     }
+    .sidebar-header { margin-bottom: 15px; padding: 0 5px; }
+    .sidebar-title { font-size: 13px; font-weight: 600; color: #86868b; text-transform: uppercase; }
 
-    .sidebar-header {
-      margin-bottom: 15px;
-      padding: 0 5px;
-    }
-    .sidebar-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #86868b;
-      text-transform: uppercase;
-    }
-
-    /* 重置 Ztree 基础排版 */
-    .ztree {
-      padding: 0;
-      flex: 1;
-    }
-    .ztree * {
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, "PingFang SC", sans-serif !important;
-      font-size: 14px !important;
-    }
-
-    /* 保证列表基础行高 */
-    .ztree li {
-      padding: 3px 0;
-      list-style: none;
-      position: relative;
-    }
-
-    /* ==================== 核心科技：固定单行高度(32px)的绝对定位背景层 ==================== */
+    .ztree { padding: 0; flex: 1; }
+    .ztree * { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, "PingFang SC", sans-serif !important; font-size: 14px !important; }
+    .ztree li { padding: 3px 0; list-style: none; position: relative; }
     .ztree li::before {
-      content: '';
-      position: absolute;
-      top: 3px;
-      height: 32px; /* 严格锁定单行高度 */
-      left: -10px;
-      right: 0;
-      border-radius: 8px;
-      z-index: 0;
-      transition: background-color 0.15s ease, box-shadow 0.15s ease;
-      pointer-events: none;
+      content: ''; position: absolute; top: 3px; height: 32px; left: -10px; right: 0;
+      border-radius: 8px; z-index: 0; transition: background-color 0.15s ease, box-shadow 0.15s ease; pointer-events: none;
     }
-    .ztree li.level0::before {
-      left: -15px !important;
-    }
-
-    /* 白灰间隔斑马线底色 */
-    .ztree li:nth-child(odd)::before {
-      background-color: #ffffff;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-    }
-    .ztree li:nth-child(even)::before {
-      background-color: #f2f2f7;
-    }
-
-    /* 悬停时背景加深 */
-    .ztree li:hover::before {
-      background-color: #e5e5ea !important;
-    }
-
-    /* 选中当前行高亮反白 */
-    .ztree li:has(> a.curSelectedNode)::before {
-      background-color: #007aff !important;
-      box-shadow: 0 2px 6px rgba(0, 122, 255, 0.3);
-    }
-
-    /* 提升条目容器层级，禁用 a 标签自带背景，完全由 ::before 呈现视觉 */
-    .ztree li a {
-      height: 32px;
-      line-height: 32px;
-      display: inline-block;
-      width: calc(100% - 10px);
-      color: #1d1d1f;
-      position: relative;
-      z-index: 1;
-      text-decoration: none !important;
-      background: transparent !important;
-      border: none !important;
-      cursor: pointer;
-      box-sizing: border-box;
-    }
-
-    /* 保证文字在选中时完美反白 */
-    .ztree li span {
-      line-height: 32px;
-      position: relative;
-      z-index: 1;
-    }
-    .ztree li a.curSelectedNode span {
-      color: #ffffff !important;
-      font-weight: 500;
-    }
-
-    /* ==================== 展开/折叠小箭头精准定制 ==================== */
-    .ztree li span.button.switch {
-      width: 20px;
-      height: 32px;
-      background-image: none !important;
-      position: relative;
-      z-index: 2;
-      cursor: pointer;
-    }
-
-    /* 默认闭合状态：箭头朝右，颜色固定为标准灰 #86868b */
+    .ztree li.level0::before { left: -15px !important; }
+    .ztree li:nth-child(odd)::before { background-color: #ffffff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02); }
+    .ztree li:nth-child(even)::before { background-color: #f2f2f7; }
+    .ztree li:hover::before { background-color: #e5e5ea !important; }
+    .ztree li:has(> a.curSelectedNode)::before { background-color: #007aff !important; box-shadow: 0 2px 6px rgba(0, 122, 255, 0.3); }
+    .ztree li a { height: 32px; line-height: 32px; display: inline-block; width: calc(100% - 10px); color: #1d1d1f; position: relative; z-index: 1; text-decoration: none !important; background: transparent !important; border: none !important; cursor: pointer; box-sizing: border-box; }
+    .ztree li span { line-height: 32px; position: relative; z-index: 1; }
+    .ztree li a.curSelectedNode span { color: #ffffff !important; font-weight: 500; }
+    .ztree li span.button.switch { width: 20px; height: 32px; background-image: none !important; position: relative; z-index: 2; cursor: pointer; }
     .ztree li span.button.switch::after {
-      content: '';
-      position: absolute;
-      top: 12px;
-      left: 6px;
-      width: 0;
-      height: 0;
-      border-style: solid;
-      border-width: 4px 0 4px 6px;
-      border-color: transparent transparent transparent #86868b;
-      transition: transform 0.2s ease, border-color 0.2s ease;
+      content: ''; position: absolute; top: 12px; left: 6px; width: 0; height: 0;
+      border-style: solid; border-width: 4px 0 4px 6px; border-color: transparent transparent transparent #86868b; transition: transform 0.2s ease, border-color 0.2s ease;
     }
+    .ztree li span.button.roots_open::after, .ztree li span.button.center_open::after, .ztree li span.button.bottom_open::after { transform: rotate(90deg); border-color: transparent transparent transparent #86868b; }
+    .ztree li:has(> a.curSelectedNode) > span.button.switch::after { border-color: transparent transparent transparent #ffffff !important; }
+    .ztree li span.button.ico_open, .ztree li span.button.ico_close, .ztree li span.button.ico_docu { display: none !important; }
 
-    /* 展开状态方向向下 (旋转90度) */
-    .ztree li span.button.roots_open::after,
-    .ztree li span.button.center_open::after,
-    .ztree li span.button.bottom_open::after {
-      transform: rotate(90deg);
-      border-color: transparent transparent transparent #86868b;
-    }
-
-    /* 被选中时箭头同步变白 */
-    .ztree li:has(> a.curSelectedNode) > span.button.switch::after {
-      border-color: transparent transparent transparent #ffffff !important;
-    }
-
-    /* 彻底隐藏默认文件/文件夹图标 */
-    .ztree li span.button.ico_open,
-    .ztree li span.button.ico_close,
-    .ztree li span.button.ico_docu {
-      display: none !important;
-    }
-
-    /* =================================================================
-       右侧主内容区定制
-       ================================================================= */
+    /* 右侧主内容区定制 */
     .apple-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
     .apple-header { padding: 30px 40px 20px 40px; background: rgba(245, 245, 247, 0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border-bottom: 1px solid rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 20; }
     .large-title { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; margin: 0 0 5px 0; }
-    .sub-title { font-size: 14px; color: #86868b; margin-bottom: 20px; }
+    .sub-title { font-size: 14px; color: #86868b; margin-bottom: 0; }
     .action-bar { display: flex; justify-content: space-between; align-items: center; }
-    .action-tools { display: flex; align-items: center; gap: 12px; margin-left: auto; }
-    .spotlight-search { background: #fff; border-radius: 8px; border: 1px solid #d2d2d7; padding: 8px 15px 8px 32px; width: 220px; font-size: 13px; transition: all 0.2s; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%2386868b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>'); background-repeat: no-repeat; background-position: 10px center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-    .spotlight-search:focus { border-color: #007aff; box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2); outline: none; width: 260px;}
-    .apple-btn { background: #007aff; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+    .action-tools { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .spotlight-search { background: #fff; border-radius: 8px; border: 1px solid #d2d2d7; padding: 8px 15px 8px 32px; width: 200px; font-size: 13px; transition: all 0.2s; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%2386868b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>'); background-repeat: no-repeat; background-position: 10px center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+    .spotlight-search:focus { border-color: #007aff; box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2); outline: none; width: 240px; }
+    .apple-btn { background: #007aff; color: #fff; border: none; border-radius: 8px; padding: 8px 15px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
     .apple-btn:hover { background: #0062cc; }
     .apple-btn-secondary { background: #e8e8ed; color: #007aff; }
     .apple-btn-secondary:hover { background: #d1d1d6; }
     .content-scroll-area { flex: 1; display: flex; overflow-y: auto; padding: 0 20px 40px 40px; scroll-behavior: smooth; }
-    .rule-list-container { flex: 1; padding-right: 40px; padding-top: 10px;}
+    .rule-list-container { flex: 1; padding-right: 40px; padding-top: 10px; }
 
-    /* ==================== 侧边 TOC 快速导航区定制（带垂直滚动轴） ==================== */
-    .toc-sidebar {
-      width: 220px;
-      padding-top: 20px;
-      position: sticky;
-      top: 0;
-      align-self: flex-start;
-      max-height: calc(100vh - 180px);
-      overflow-y: auto;
-      overflow-x: hidden;
-      padding-right: 5px;
-    }
-
-    .toc-sidebar::-webkit-scrollbar {
-      width: 4px;
-    }
-    .toc-sidebar::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    .toc-sidebar::-webkit-scrollbar-thumb {
-      background: #d2d2d7;
-      border-radius: 4px;
-    }
-    .toc-sidebar::-webkit-scrollbar-thumb:hover {
-      background: #a1a1a6;
-    }
-
-    .toc-title { font-size: 12px; font-weight: 700; color: #86868b; text-transform: uppercase; margin-bottom: 12px;}
-
-    /* 多级 TOC 容器样式 */
+    /* 侧边 TOC 快速导航区定制 */
+    .toc-sidebar { width: 220px; padding-top: 20px; position: sticky; top: 0; align-self: flex-start; max-height: calc(100vh - 180px); overflow-y: auto; overflow-x: hidden; padding-right: 5px; }
+    .toc-sidebar::-webkit-scrollbar { width: 4px; }
+    .toc-sidebar::-webkit-scrollbar-track { background: transparent; }
+    .toc-sidebar::-webkit-scrollbar-thumb { background: #d2d2d7; border-radius: 4px; }
+    .toc-sidebar::-webkit-scrollbar-thumb:hover { background: #a1a1a6; }
+    .toc-title { font-size: 12px; font-weight: 700; color: #86868b; text-transform: uppercase; margin-bottom: 12px; }
     .toc-list { list-style: none; padding: 0; margin: 0; border-left: 1px solid #e5e5ea; }
     .toc-list li { position: relative; }
     .toc-list ul { list-style: none; padding-left: 18px; margin: 0; border-left: 1px solid #f2f2f7; }
-    .toc-list a {
-      display: block;
-      padding: 6px 12px;
-      color: #86868b;
-      font-size: 13px;
-      font-weight: 500;
-      text-decoration: none;
-      transition: all 0.2s;
-      border-left: 2px solid transparent;
-      margin-left: -2px;
-    }
+    .toc-list a { display: block; padding: 6px 12px; color: #86868b; font-size: 13px; font-weight: 500; text-decoration: none; transition: all 0.2s; border-left: 2px solid transparent; margin-left: -2px; }
     .toc-list a:hover { color: #1d1d1f; background: #f5f5f7; border-radius: 0 6px 6px 0; }
     .toc-list a.active { color: #007aff; border-left-color: #007aff; font-weight: 600; background: rgba(0, 122, 255, 0.05); }
 
-    .group-header { border-top: 1px solid #f2f2f7; padding-top: 20px; margin-top: 40px; }
+    .group-header { border-top: 1px solid #f2f2f7; padding-top: 20px; margin-top: 10px; }
     .group-header-l2 { font-size: 20px; color: #1d1d1f; font-weight: 700; }
     .group-header-l3 { font-size: 16px; color: #86868b; font-weight: 600; margin-top: 20px; }
     .apple-list-group { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); overflow: hidden; }
 
-    /* 极致保护：主内容区卡片样式完全不变 */
+    /* 主内容区卡片样式 */
     .apple-list-item { display: flex; align-items: flex-start; padding: 18px 20px; border-bottom: 1px solid #f2f2f7; transition: background 0.2s; }
     .apple-list-item:last-child { border-bottom: none; }
     .apple-list-item:hover { background: #fbfbfd; }
     .item-clause { font-size: 14px; font-weight: 700; color: #007aff; width: 65px; flex-shrink: 0; padding-top: 2px; }
     .item-content { flex: 1; padding-right: 25px; min-width: 0; }
     .item-title { font-size: 15px; color: #1d1d1f; margin-bottom: 6px; font-weight: 600; line-height: 1.4; word-break: break-all; }
-    .item-desc { font-size: 13px; color: #86868b; }
     .item-action { display: flex; align-items: center; gap: 15px; flex-shrink: 0; }
-
-    .apple-badge { padding: 4px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; text-align: center; width: 65px;}
+    .apple-badge { padding: 4px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; text-align: center; width: 65px; }
     .badge-forever { background: #ffeceb; color: #ff3b30; }
     .badge-30y { background: #fff5e5; color: #ff9500; }
     .badge-10y { background: #ebf9ee; color: #34c759; }
-    .badge-folder { background: #f2f2f7; color: #86868b; border: 1px dashed #d2d2d7; }
-
-    .btn-edit { background-color: #f2f2f7; color: #007aff; border: none; padding: 6px 14px; border-radius: 14px; font-size: 13px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
-    .btn-edit:hover { background-color: #e5e5ea; }
-    .btn-delete { background-color: transparent; color: #ff3b30; border: 1px solid #ff3b30; padding: 5px 13px; border-radius: 14px; font-size: 13px; cursor: pointer; transition: all 0.2s; margin-left: 8px; font-weight: 500; }
-    .btn-delete:hover { background-color: #ff3b30; color: #fff; }
 
     .empty-state { text-align: center; padding: 80px 0; color: #86868b; display: none; }
     .empty-state i { font-size: 48px; opacity: 0.3; margin-bottom: 15px; }
     .empty-state p { font-size: 14px; font-weight: 500; }
-
-    /* 祖先路径面包屑微标视图定制 */
     .rule-lineage-path { font-size: 12px; color: #a1a1a6; margin-bottom: 5px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
     .rule-lineage-path i { font-size: 10px; color: #c7c7cc; }
+
+    /* 聚合操作菜单定制 */
+    .btn-dropdown-trigger { background: #f2f2f7; color: #007aff; border: none; padding: 6px 14px; border-radius: 14px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; }
+    .btn-dropdown-trigger:hover { background: #e5e5ea; }
+    .dropdown-action-wrapper { position: relative; display: inline-block; }
+    .apple-action-menu { position: absolute; right: 0; top: 36px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.12); border-radius: 12px; padding: 6px; min-width: 130px; z-index: 100; opacity: 0; visibility: hidden; transform: translateY(-8px); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+    .dropdown-action-wrapper:hover .apple-action-menu, .dropdown-action-wrapper.active .apple-action-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+    .apple-action-menu button { display: block; width: 100%; text-align: left; background: none; border: none; padding: 8px 12px; font-size: 13px; font-weight: 500; color: #1d1d1f; border-radius: 6px; cursor: pointer; transition: background 0.15s; }
+    .apple-action-menu button:hover { background: #f2f2f7; color: #007aff; }
+    .apple-action-menu button.menu-item-danger:hover { background: #ffeceb; color: #ff3b30; }
   </style>
 </head>
 <body>
@@ -276,11 +121,33 @@
 
   <div class="apple-main">
     <div class="apple-header">
-      <h1 class="large-title" id="curUnitTitle">选择单位以加载知识库</h1>
-      <p class="sub-title" id="ruleCountDesc">请在左侧选择具体单位</p>
-      <div class="action-bar">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+        <div>
+          <h1 class="large-title" id="curUnitTitle">选择单位以加载知识库</h1>
+          <p class="sub-title" id="ruleCountDesc">请在左侧选择具体单位</p>
+        </div>
+
+        <div id="aiProgressBadge" style="display: none; background: #ffffff; border: 1px solid #e5e5ea; border-radius: 12px; padding: 12px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); min-width: 180px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 12px; font-weight: 700; color: #86868b; text-transform: uppercase;">AI 语义浓缩进度</span>
+            <span id="badgePercent" style="font-size: 14px; font-weight: 800; color: #007aff;">0%</span>
+          </div>
+          <div style="width: 100%; background-color: #f2f2f7; border-radius: 4px; height: 6px; overflow: hidden;">
+            <div id="badgeProgressBar" style="width: 0%; background-color: #34c759; height: 100%; transition: width 0.4s ease;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 11px; color: #a1a1a6; margin-top: 6px;">
+            <span id="badgeMetrics">已处理: 0 / 0</span>
+            <span id="badgeFailed" style="color: #ff3b30; display: none;">异常: 0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-bar" style="margin-top: 15px;">
         <div class="action-tools">
           <input type="text" class="spotlight-search" id="searchInput" placeholder="搜索条款、关键词...">
+          <button class="apple-btn apple-btn-secondary" onclick="triggerBatchEnhance()" title="手动唤醒重试AI解析失败的数据">
+            <i class="fa fa-magic"></i> 一键批量 AI 语义浓缩
+          </button>
           <button class="apple-btn apple-btn-secondary" onclick="openImport()">
             <i class="fa fa-cloud-upload"></i> 智能导入
           </button>
@@ -311,89 +178,49 @@
 
 <script th:inline="javascript">
   var prefix = ctx + "system/rule";
-
   var currentDeptId = null;
   var currentCategory = "";
+  var progressTimer = null;
 
   $(function() {
     initDeptTree();
     bindEvents();
   });
 
-  /**
-   * 1. 初始化苹果风格集成树 (开启 Full-Row Click Expansion)
-   */
+  /** 1. 组织树加载逻辑 */
   function initDeptTree() {
     var setting = {
-      view: {
-        showLine: false,
-        selectedMulti: false,
-        showIcon: false
-      },
-      data: {
-        key: { title: "name" },
-        simpleData: { enable: true }
-      },
+      view: { showLine: false, selectedMulti: false, showIcon: false },
+      data: { key: { title: "name" }, simpleData: { enable: true } },
       callback: {
         onClick: function(e, treeId, node) {
           var zTreeObj = $.fn.zTree.getZTreeObj("tree");
-
-          // -----------------------------------------------------------------
-          // 场景 A：只选择单位，则加载该单位全部条款内容
-          // -----------------------------------------------------------------
           if (node.nodeType === "UNIT") {
             currentDeptId = node.id;
             currentCategory = "";
-
-            $("#curUnitTitle").fadeOut(150, function() {
-              $(this).text(node.name).fadeIn(150);
-            });
-
+            $("#curUnitTitle").fadeOut(150, function() { $(this).text(node.name).fadeIn(150); });
             if (!node.children || node.children.length === 0) {
-              loadCategorySubNodes(node, 1, function() {
-                zTreeObj.expandNode(node, true, false, true);
-              });
-            } else {
-              zTreeObj.expandNode(node, null, false, true);
-            }
-
-          }
-                  // -----------------------------------------------------------------
-                  // 场景 B：点击分类门类节点 (一级、二级或深级子类)
-          // -----------------------------------------------------------------
-          else if (node.nodeType === "CATEGORY") {
+              loadCategorySubNodes(node, 1, function() { zTreeObj.expandNode(node, true, false, true); });
+            } else { zTreeObj.expandNode(node, null, false, true); }
+          } else if (node.nodeType === "CATEGORY") {
             currentDeptId = node.unitId;
-
-            // 💡 终极追溯逻辑：沿树干向上回溯找到它所属的【一级分类节点】
+            // 向上追溯到一级分类节点
             var l1Node = node;
             while (l1Node && l1Node.nodeType === "CATEGORY" && l1Node.categoryLevel > 1) {
               l1Node = l1Node.getParentNode();
             }
-
-            // 完美获取到所属一级大类代号 (例如 "WS")
             currentCategory = l1Node ? (l1Node.categoryCode || "") : (node.categoryCode || "");
 
-            console.log("👉 节点点击追踪完毕！当前点击节点名:", node.name, "已自动映射到所属一级门类代号 currentCategory =", currentCategory);
-
-            // 界面标题平滑切换展示层级关系
             var parentNode = node.getParentNode();
             var titleText = (parentNode ? parentNode.name + " - " : "") + node.name;
-            $("#curUnitTitle").fadeOut(150, function() {
-              $(this).text(titleText).fadeIn(150);
-            });
+            $("#curUnitTitle").fadeOut(150, function() { $(this).text(titleText).fadeIn(150); });
 
             if (node.isParent) {
               if (!node.children || node.children.length === 0) {
-                var nextLevel = (node.categoryLevel || 1) + 1;
-                loadCategorySubNodes(node, nextLevel, function() {
-                  zTreeObj.expandNode(node, true, false, true);
-                });
-              } else {
-                zTreeObj.expandNode(node, null, false, true);
-              }
+                loadCategorySubNodes(node, (node.categoryLevel || 1) + 1, function() { zTreeObj.expandNode(node, true, false, true); });
+              } else { zTreeObj.expandNode(node, null, false, true); }
             }
           }
-
           loadRuleData();
         }
       }
@@ -401,87 +228,44 @@
 
     $.get(ctx + "system/unit/treeData", function(data) {
       var treeNodes = data.map(function(item) {
-        return {
-          id: item.id,
-          pId: item.pId,
-          name: item.name,
-          nodeType: "UNIT",
-          isParent: true
-        };
+        return { id: item.id, pId: item.pId, name: item.name, nodeType: "UNIT", isParent: true };
       });
-
       var zTreeObj = $.fn.zTree.init($("#tree"), setting, treeNodes);
-
       var nodes = zTreeObj.getNodes();
       if (nodes.length > 0) {
         zTreeObj.selectNode(nodes[0]);
         currentDeptId = nodes[0].id;
         $("#curUnitTitle").text(nodes[0].name);
-
-        loadCategorySubNodes(nodes[0], 1, function() {
-          zTreeObj.expandNode(nodes[0], true, false, true);
-        });
-
+        loadCategorySubNodes(nodes[0], 1, function() { zTreeObj.expandNode(nodes[0], true, false, true); });
         loadRuleData();
       }
     });
   }
 
-  /**
-   * 🧠 数据组装器神级对齐：利用正则从 name 智能抽取缺失的代号
-   */
   function loadCategorySubNodes(parentNode, targetLevel, callback) {
     var zTreeObj = $.fn.zTree.getZTreeObj("tree");
-
-    var queryParams = {
-      categoryLevel: targetLevel
-    };
-
-    if (targetLevel === 1) {
-      queryParams.unitId = parentNode.id;
-    } else {
-      queryParams.parentId = parentNode.id;
-      queryParams.unitId = parentNode.unitId;
-    }
+    var queryParams = { categoryLevel: targetLevel };
+    if (targetLevel === 1) queryParams.unitId = parentNode.id;
+    else { queryParams.parentId = parentNode.id; queryParams.unitId = parentNode.unitId; }
 
     $.post(ctx + "system/categoryTree/treeData", queryParams, function(result) {
-      var dataList = null;
-
-      if (Array.isArray(result)) {
-        dataList = result;
-      } else if (result && result.code == 0) {
-        dataList = result.data || result.rows;
-      }
-
+      var dataList = Array.isArray(result) ? result : (result && result.code == 0 ? result.data || result.rows : null);
       if (dataList && dataList.length > 0) {
         var newNodes = dataList.map(function(cat) {
-
-          // 🚀 核心死因解决：如果后端返回标准 Ztree 丢失了 categoryCode 属性，
-          // 直接利用正则从显示的 name "文书档案 (WS)" 括号中精准把代号提取出来！
           var extractedCode = cat.categoryCode || cat.code || "";
           if (!extractedCode && cat.name) {
             var match = cat.name.match(/\(([A-Z0-9_-]+)\)/);
-            if (match && match[1]) {
-              extractedCode = match[1].trim();
-            }
+            if (match && match[1]) extractedCode = match[1].trim();
           }
-
           return {
-            id: cat.id,
-            pId: parentNode.id,
-            name: cat.name || (cat.categoryName + " (" + extractedCode + ")"),
-            title: cat.title || cat.name,
-            categoryCode: extractedCode, // 完美挂载洗出来的真实代号
+            id: cat.id, pId: parentNode.id, name: cat.name || (cat.categoryName + " (" + extractedCode + ")"),
+            title: cat.title || cat.name, categoryCode: extractedCode,
             unitId: parentNode.nodeType === "UNIT" ? parentNode.id : parentNode.unitId,
-            nodeType: "CATEGORY",
-            categoryLevel: targetLevel,
-            isParent: targetLevel < 3
+            nodeType: "CATEGORY", categoryLevel: targetLevel, isParent: targetLevel < 3
           };
         });
-
         zTreeObj.addNodes(parentNode, newNodes, true);
         zTreeObj.expandNode(parentNode, true, false, true);
-
         if (callback) callback();
       } else {
         if (parentNode.nodeType === "CATEGORY") {
@@ -493,244 +277,180 @@
     });
   }
 
-  /**
-   * 打通后台 MyBatis Mapper 参数约定映射
-   */
   function loadRuleData() {
     $.modal.loading("正在加载规则库...");
-
-    // 将主键字段彻底重构为后台实体类中定义的 qzh
-    var queryParams = {
-      qzh: currentDeptId,
-      categoryCode: currentCategory,
-      pageNum: 1,
-      pageSize: 10000
-    };
-
-    console.log("🚀 AJAX 发送给后台的过滤参数:", queryParams);
-
-    $.post(prefix + "/list", queryParams, function(result) {
+    $.post(prefix + "/list", { qzh: currentDeptId, categoryCode: currentCategory, pageNum: 1, pageSize: 10000 }, function(result) {
       $.modal.closeLoading();
       if (result.code == 0) {
-        var rules = result.rows;
         $("#ruleCountDesc").text("当前共配置 " + result.total + " 条保管期限规则");
-        renderRuleList(rules);
-      } else {
-        $.modal.msgError(result.msg);
-      }
+        renderRuleList(result.rows);
+        startAiProgressPolling();
+      } else { $.modal.msgError(result.msg); }
     });
   }
 
-  /**
-   * 🧠 升级版渲染引擎：
-   * 1. 严格分离出两级 TOC 快速导航（顶级大类 + 二级核心大纲），均保留原件字面标号；
-   * 2. 绝对锁定内容区渲染方式：任何级别进入内容大盘后均保留完整的标准卡片样式；
-   * 3. 完美消除顶部无效默认标题及对应板块自身容器卡片的重复冗余展示（落实图中“可以不用显示”）。
-   */
+  /** 🧠 轮询监控引擎：动态更新大盘处理状态指示器 */
+  function startAiProgressPolling() {
+    if (!currentDeptId) return;
+    if (progressTimer) clearInterval(progressTimer);
+
+    var pollAction = function() {
+      $.post(prefix + "/enhancementProgress", { qzh: currentDeptId, categoryCode: currentCategory }, function(res) {
+        if (res.code == 0 && res.data) {
+          var p = res.data;
+          if (p.total > 0) {
+            $("#aiProgressBadge").fadeIn(200);
+            $("#badgePercent").text(p.percent + "%");
+            $("#badgeProgressBar").css("width", p.percent + "%");
+            $("#badgeMetrics").text("已处理: " + p.completed + " / " + p.total);
+
+            if (p.failed > 0) $("#badgeFailed").text("异常: " + p.failed).show();
+            else $("#badgeFailed").hide();
+
+            if (p.percent >= 100) {
+              clearInterval(progressTimer);
+              setTimeout(function(){ $("#badgeProgressBar").css("background-color", "#007aff"); }, 1000);
+            }
+          } else { $("#aiProgressBadge").hide(); }
+        }
+      });
+    };
+    pollAction();
+    progressTimer = setInterval(pollAction, 3000);
+  }
+
+  /** 💡 新增驱动：手动触发遗漏或失败数据的 AI 语义增强重试 */
+  function triggerBatchEnhance() {
+    if (!currentDeptId) {
+      $.modal.msgWarning("请先在左侧选择要处理的目标单位");
+      return;
+    }
+    $.modal.confirm("确认启动大模型语义浓缩吗？系统将自动对当前分类下未处理或调用异常的条款发起静默特征提取。", function() {
+      $.post(prefix + "/batchEnhance", { qzh: currentDeptId, categoryCode: currentCategory }, function(res) {
+        if (res.code == 0 || res.code == 200) {
+          $.modal.msgSuccess(res.msg);
+          startAiProgressPolling(); // 立即快抽并重启监听大盘
+        } else {
+          $.modal.msgError(res.msg || "重试指令下发失败");
+        }
+      });
+    });
+  }
+
   function renderRuleList(rules) {
     var $container = $("#ruleContainer");
     var $toc = $("#tocNav");
     $container.find(".category-group").remove();
     $toc.empty();
-
-    if (!rules || rules.length === 0) {
-      $("#emptyState").show();
-      return;
-    }
+    if (!rules || rules.length === 0) { $("#emptyState").show(); return; }
     $("#emptyState").hide();
 
-    // --- 第一步：对规则进行基于顶级大模块归类，并提取次级导航节点 ---
     var sectionGroups = {};
-
     rules.forEach(function(r) {
-      // 智能提取该规则所属的顶级业务大模块名称（例如：“各部门共有部分”）
       var sectionName = "通用规则";
       if (r.parentPathText && r.parentPathText.trim() !== "") {
-        var parts = r.parentPathText.split("/");
-        sectionName = parts[0].trim();
+        sectionName = r.parentPathText.split("/")[0].trim();
       } else {
-        // 无父级血缘的直接定为根模块
-        sectionName = (r.clauseNo ? r.clauseNo + " " : "") + r.clauseText;
-        sectionName = sectionName.trim();
+        sectionName = ((r.clauseNo ? r.clauseNo + " " : "") + r.clauseText).trim();
       }
 
       if (!sectionGroups[sectionName]) {
-        sectionGroups[sectionName] = {
-          id: "sec-" + Math.random().toString(36).substr(2, 6),
-          rules: [],
-          subTocList: [] // 专供二级 TOC 展示的子类目容器
-        };
+        sectionGroups[sectionName] = { id: "sec-" + Math.random().toString(36).substr(2, 6), rules: [], subTocList: [] };
       }
-
       sectionGroups[sectionName].rules.push(r);
 
-      // 嗅探是否为二级核心类目节点（如“（一） 会议文件”）供写入子导航
-      // 判断依据：父级路径仅包含一层顶级模块，或者自身编号符合大章节格式
       var isL3Node = false;
-      if (r.clauseNo && /^[(（][一二三四五六七八九十]+[)）]/.test(r.clauseNo.trim())) {
-        isL3Node = true;
-      } else if (r.parentPathText) {
-        var pParts = r.parentPathText.split("/");
-        if (pParts.length === 1) {
-          isL3Node = true;
-        }
-      }
+      if (r.clauseNo && /^[(（][一二三四五六七八九十]+[)）]/.test(r.clauseNo.trim())) isL3Node = true;
+      else if (r.parentPathText && r.parentPathText.split("/").length === 1) isL3Node = true;
 
       if (isL3Node) {
         var tocDisplayTitle = (r.clauseNo ? r.clauseNo + " " : "") + r.clauseText;
-        // 保证 TOC 菜单排重
-        var alreadyAdded = sectionGroups[sectionName].subTocList.some(function(item) {
-          return item.title === tocDisplayTitle;
-        });
-        if (!alreadyAdded) {
+        if (!sectionGroups[sectionName].subTocList.some(function(item) { return item.title === tocDisplayTitle; })) {
           var targetAnchorId = "rule-node-" + r.ruleId;
-          sectionGroups[sectionName].subTocList.push({
-            title: tocDisplayTitle,
-            id: targetAnchorId
-          });
-          // 标记当前规则的 DOM ID，用于联动滚动定位
+          sectionGroups[sectionName].subTocList.push({ title: tocDisplayTitle, id: targetAnchorId });
           r.tocAnchorId = targetAnchorId;
         }
       }
     });
 
-    // --- 第二步：双层联动渲染 TOC 与完美卡片容器 ---
     for (var secName in sectionGroups) {
       var group = sectionGroups[secName];
-
-      // 1. 组装 TOC 导航树（严格两级联动）
       var $secLi = $('<li><a href="#' + group.id + '" style="font-weight: 600; color: #1d1d1f;">' + secName + '</a></li>');
       if (group.subTocList.length > 0) {
         var $subUl = $('<ul></ul>');
-        group.subTocList.forEach(function(subToc) {
-          $subUl.append('<li><a href="#' + subToc.id + '">' + subToc.title + '</a></li>');
-        });
+        group.subTocList.forEach(function(subToc) { $subUl.append('<li><a href="#' + subToc.id + '">' + subToc.title + '</a></li>'); });
         $secLi.append($subUl);
       }
       $toc.append($secLi);
 
-      // 2. 组装主内容区排版大板块
-      var groupHtml = '<div class="category-group" id="' + group.id + '">' +
-              '  <h2 class="group-header group-header-l2">' + secName + '</h2>' +
-              '  <div class="apple-list-group">';
-
+      var groupHtml = '<div class="category-group" id="' + group.id + '"><h2 class="group-header group-header-l2">' + secName + '</h2><div class="apple-list-group">';
       group.rules.forEach(function(r) {
-        // 💡 落实图示要求：“可以不用显示”
-        // 如果当前规则行自身就是定义该模块标题的纯容器（例如“各部门共有部分”自身且无保存期限），
-        // 既然模块名已作为外层 <h2 class="group-header"> 展现，直接屏蔽此容器卡片避免版面重叠冗余！
-        var isSectionSelfNode = (!r.parentPathText || r.parentPathText.trim() === "") &&
-                (!r.retentionPeriod || r.retentionPeriod.trim() === "");
-        var fullTextComp = (r.clauseNo ? r.clauseNo + " " : "") + r.clauseText;
-        if (isSectionSelfNode && fullTextComp.trim() === secName) {
-          return; // 静默忽略输出，保持排版极简
-        }
-
-        // 注入 TOC 定位锚点属性
-        var cardAnchorAttr = r.tocAnchorId ? ' id="' + r.tocAnchorId + '"' : '';
-
-        // 💡 绝对不变：复用原版完美的标准卡片结构呈现每一行数据
-        var isFolder = !r.retentionPeriod || r.retentionPeriod.trim() === "";
-        var badgeHtml = "";
-        if (isFolder) {
-          badgeHtml = '<span class="apple-badge badge-folder"><i class="fa fa-folder-o"></i> 目录</span>';
-        } else {
-          var badgeClass = r.retentionPeriod == '永久' ? 'badge-forever' :
-                  (r.retentionPeriod == '30年' ? 'badge-30y' : 'badge-10y');
-          badgeHtml = '<span class="apple-badge ' + badgeClass + '">' + r.retentionPeriod + '</span>';
-        }
-
-        var lineageHtml = "";
-        if (r.parentPathText && r.parentPathText.trim() !== "") {
-          var crumbs = r.parentPathText.split("/");
-          var crumbText = crumbs.join(' <i class="fa fa-angle-right"></i> ');
-          lineageHtml = '<div class="rule-lineage-path"><i class="fa fa-sitemap"></i> ' + crumbText + '</div>';
-        }
-
-        var clauseDisplay = r.clauseNo ? r.clauseNo : '<span style="color:#d2d2d7">[正文]</span>';
-
-        groupHtml += '<div class="apple-list-item"' + cardAnchorAttr + '>' +
-                '  <div class="item-clause">' + clauseDisplay + '</div>' +
-                '  <div class="item-content">' +
-                lineageHtml +
-                '    <div class="item-title">' + r.clauseText + '</div>' +
-                '  </div>' +
-                '  <div class="item-action">' +
-                badgeHtml +
-                '    <button class="btn-edit" onclick="openEdit(\'' + r.ruleId + '\')">编辑</button>' +
-                '    <button class="btn-delete" onclick="deleteRule(\'' + r.ruleId + '\')">删除</button>' +
-                '  </div>' +
-                '</div>';
+        var isSectionSelfNode = (!r.parentPathText || r.parentPathText.trim() === "") && (!r.retentionPeriod || r.retentionPeriod.trim() === "");
+        if (isSectionSelfNode && ((r.clauseNo ? r.clauseNo + " " : "") + r.clauseText).trim() === secName) return;
+        groupHtml += buildCleanRowItem(r, 0);
       });
+      $container.append(groupHtml + '</div></div>');
+    }
+    bindTocEvents();
+  }
 
-      groupHtml += '  </div></div>';
-      $container.append(groupHtml);
+  function buildCleanRowItem(r, depthCut) {
+    var isFolder = !r.retentionPeriod || r.retentionPeriod.trim() === "";
+    var badgeHtml = isFolder ? '' : (r.retentionPeriod == '永久' ? '<span class="apple-badge badge-forever">永久</span>' : (r.retentionPeriod == '30年' ? '<span class="apple-badge badge-30y">30年</span>' : '<span class="apple-badge badge-10y">' + r.retentionPeriod + '</span>'));
+    var subPathLineage = "";
+    if (r.parentPathText && r.parentPathText.trim() !== "") {
+      var trailingPaths = r.parentPathText.split("/").slice(depthCut + 1).map(function(p){ return p.trim(); }).filter(Boolean);
+      if (trailingPaths.length > 0) subPathLineage = '<div class="rule-lineage-path"><i class="fa fa-angle-right"></i> ' + trailingPaths.join(' / ') + '</div>';
     }
 
-    bindTocEvents();
+    var clauseDisplay = r.clauseNo ? r.clauseNo : '<span style="color:#d2d2d7">[正文]</span>';
+    var appendChildBtn = isFolder ? '<button onclick="openAddChild(\'' + r.ruleId + '\', \'' + r.categoryCode + '\')"><i class="fa fa-level-down"></i> 添加子项</button>' : '';
+    var cardAnchorAttr = r.tocAnchorId ? ' id="' + r.tocAnchorId + '"' : '';
+
+    return '<div class="apple-list-item"' + cardAnchorAttr + '>' +
+            '  <div class="item-clause">' + clauseDisplay + '</div>' +
+            '  <div class="item-content">' + subPathLineage + '<div class="item-title">' + r.clauseText + '</div></div>' +
+            '  <div class="item-action">' + badgeHtml +
+            '    <div class="dropdown-action-wrapper"><button class="btn-dropdown-trigger">操作 <i class="fa fa-angle-down"></i></button>' +
+            '      <div class="apple-action-menu">' + appendChildBtn +
+            '        <button onclick="openEdit(\'' + r.ruleId + '\')"><i class="fa fa-edit"></i> 编辑修改</button>' +
+            '        <button class="menu-item-danger" onclick="deleteRule(\'' + r.ruleId + '\')"><i class="fa fa-trash-o"></i> 物理移除</button>' +
+            '      </div></div></div></div>';
+  }
+
+  function openAddChild(parentRuleId, targetCategory) {
+    if(!currentDeptId) return;
+    $.modal.open("在此节点下派生新子规则", prefix + "/add/" + currentDeptId + "?categoryCode=" + targetCategory + "&parentId=" + parentRuleId, 800, 560);
   }
 
   function bindEvents() {
     $('#searchInput').on('input', function() {
       var keyword = $(this).val().toUpperCase();
       if(keyword) {
-        $('.apple-list-item').hide();
-        $('.apple-list-item').filter(function() {
-          return $(this).text().toUpperCase().indexOf(keyword) > -1;
-        }).show();
-      } else {
-        $('.apple-list-item').show();
-      }
+        $('.apple-list-item').hide().filter(function() { return $(this).text().toUpperCase().indexOf(keyword) > -1; }).show();
+      } else { $('.apple-list-item').show(); }
     });
   }
 
   function bindTocEvents() {
     $('.toc-list a').on('click', function(e) {
       e.preventDefault();
-      $('.toc-list a').removeClass('active');
-      $(this).addClass('active');
-      var targetId = $(this).attr('href');
-      var targetOffset = $(targetId).offset().top;
-      var containerScrollTop = $('.content-scroll-area').scrollTop();
-      var containerOffset = $('.content-scroll-area').offset().top;
-      $('.content-scroll-area').animate({
-        scrollTop: containerScrollTop + targetOffset - containerOffset - 20
-      }, 300);
+      $('.toc-list a').removeClass('active'); $(this).addClass('active');
+      var $t = $($(this).attr('href'));
+      if ($t.length > 0) {
+        $('.content-scroll-area').animate({ scrollTop: $('.content-scroll-area').scrollTop() + $t.offset().top - $('.content-scroll-area').offset().top - 20 }, 300);
+      }
     });
   }
 
-  function openImport() {
-    if(!currentDeptId) { $.modal.msgWarning("请先在左侧选择要导入的单位"); return; }
-    $.modal.open("智能导入解析方案", prefix + "/import/" + currentDeptId, '800', '500');
-  }
-  function openAdd() {
-    if(!currentDeptId) {
-      $.modal.msgWarning("请先在左侧选择归属单位");
-      return;
-    }
-    // 智能拼装目标路径，自动携带激活的门类游标
-    var url = prefix + "/add/" + currentDeptId;
-    if (currentCategory && currentCategory !== "") {
-      url += "?categoryCode=" + currentCategory;
-    }
-    // 采用精致紧凑的视窗尺寸拉开表单
-    $.modal.open("新增知识库鉴定条款", url, 800, 560);
-  }
-  function openEdit(ruleId) {
-    var url = ctx + "system/rule/edit/" + ruleId;
-    $.modal.open("修改智能鉴定规则", url, 800, 600);
-  }
+  function openImport() { if(!currentDeptId) return $.modal.msgWarning("请先在左侧选择目标单位"); $.modal.open("智能导入解析方案", prefix + "/import/" + currentDeptId, '800', '500'); }
+  function openAdd() { if(!currentDeptId) return $.modal.msgWarning("请先在左侧选择归属单位"); $.modal.open("新增知识库鉴定条款", prefix + "/add/" + currentDeptId + (currentCategory ? "?categoryCode=" + currentCategory : ""), 800, 560); }
+  function openEdit(ruleId) { $.modal.open("修改智能鉴定规则", ctx + "system/rule/edit/" + ruleId, 800, 600); }
   function deleteRule(ruleId) {
     $.modal.confirm("确认要删除这条规则吗？删除操作不可逆。", function() {
-      $.ajax({
-        url: ctx + "system/rule/remove",
-        type: "POST",
-        data: { "ids": ruleId }, // 参数精准穿透至 Controller 的 String ids
-        success: function(result) {
-          if (result.code == 0 || result.code == 200) {
-            $.modal.msgSuccess("删除成功");
-            loadRuleData(); // 原地无感丝滑重刷数据大盘
-          } else { $.modal.msgError(result.msg || "删除失败"); }
-        }
+      $.post(ctx + "system/rule/remove", { "ids": ruleId }, function(result) {
+        if (result.code == 0 || result.code == 200) { $.modal.msgSuccess("删除成功"); loadRuleData(); }
+        else { $.modal.msgError(result.msg || "删除失败"); }
       });
     });
   }

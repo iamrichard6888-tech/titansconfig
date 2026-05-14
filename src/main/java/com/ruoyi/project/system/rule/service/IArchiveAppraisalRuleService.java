@@ -3,6 +3,7 @@ package com.ruoyi.project.system.rule.service;
 import com.ruoyi.project.system.rule.domain.ArchiveAppraisalRule;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
+import java.util.Map;
 
 public interface IArchiveAppraisalRuleService {
     /** 查询规则大盘数据 */
@@ -38,4 +39,8 @@ public interface IArchiveAppraisalRuleService {
      * @return 结果 (返回受影响的行数，大于0代表成功)
      */
     public int updateArchiveAppraisalRule(ArchiveAppraisalRule rule);
+
+    public void startAsyncBatchLlmEnhancement(String qzh, String categoryCode);
+    public Map<String, Object> getBatchEnhancementProgress(String qzh, String categoryCode);
+
 }

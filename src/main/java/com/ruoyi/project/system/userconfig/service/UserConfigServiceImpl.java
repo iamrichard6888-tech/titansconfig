@@ -144,7 +144,7 @@ public class UserConfigServiceImpl {
 
                     String personType = getCellText(cells.get(0));
                     String originalName = getCellText(cells.get(1));
-                    String mobile = getCellText(cells.get(5));
+                    String mobile = getCellText(cells.get(5)).replaceAll("\\s+", "");;
 
                     temp.setSource("Word解析");
 
@@ -590,7 +590,7 @@ public class UserConfigServiceImpl {
             if ("1".equals(old.getStatus())) {
                 temp.setStatus("0");
                 temp.setErrorMsg("");// 清空报错标记
-                temp.setDescription(old.getDescription()+temp.getMobilePhone());
+                temp.setDescription(old.getDescription()+temp.getMobilePhone().replaceAll("\\s+", ""));
             }
         }
         if (StringUtils.isNotEmpty(old.getErrorMsg()) && old.getErrorMsg().equals("文档未规范填写全宗号，请点击[编辑]手动选择单位并补全账号。") && StringUtils.isNotEmpty(temp.getOrganQzh())) {

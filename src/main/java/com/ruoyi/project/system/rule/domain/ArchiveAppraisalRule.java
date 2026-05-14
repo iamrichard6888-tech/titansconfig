@@ -45,11 +45,32 @@ public class ArchiveAppraisalRule extends BaseEntity {
     /** 核心事由关键词 */
     private String eventKeywords;
 
-    /** 处理状态 */
+    /** 处理状态: 0-代码原生拆解态, 1-AI深度增强完毕, 2-人工终审交割态 */
     private Integer processStatus;
 
     /** 物理顺位号 */
     private Integer sortOrder;
+    /** 单次调用 AI 消耗的底层响应时间 (毫秒)，用于核算 ROI 资产 */
+    private Long aiCostTimeMs;
+
+    /** 记录大模型解析异常原因，供监控大盘亮红灯追溯 */
+    private String aiErrorLog;
+
+    public Long getAiCostTimeMs() {
+        return aiCostTimeMs;
+    }
+
+    public void setAiCostTimeMs(Long aiCostTimeMs) {
+        this.aiCostTimeMs = aiCostTimeMs;
+    }
+
+    public String getAiErrorLog() {
+        return aiErrorLog;
+    }
+
+    public void setAiErrorLog(String aiErrorLog) {
+        this.aiErrorLog = aiErrorLog;
+    }
 
     public String getRuleId() {
         return ruleId;
@@ -171,6 +192,8 @@ public class ArchiveAppraisalRule extends BaseEntity {
                 ", eventKeywords='" + eventKeywords + '\'' +
                 ", processStatus=" + processStatus +
                 ", sortOrder=" + sortOrder +
+                ", aiCostTimeMs=" + aiCostTimeMs +
+                ", aiErrorLog='" + aiErrorLog + '\'' +
                 '}';
     }
 }

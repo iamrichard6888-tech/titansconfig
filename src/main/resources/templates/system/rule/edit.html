@@ -1,41 +1,50 @@
 <!DOCTYPE html>
 <html lang="zh" xmlns:th="http://www.thymeleaf.org">
 <head>
-  <th:block th:include="include :: header('修改鉴定条款')" />
+  <th:block th:include="include :: header('修改智能鉴定规则')" />
+  <th:block th:include="include :: ztree-css" />
   <style>
     body { background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; color: #1d1d1f; }
-    .form-container { padding: 25px 35px; }
-    .apple-form-group { margin-bottom: 22px; }
+    .workshop-container { padding: 20px 30px; display: flex; flex-direction: column; gap: 18px; }
+    .apple-form-group { margin-bottom: 12px; }
     .apple-label { font-size: 13px; font-weight: 600; color: #86868b; margin-bottom: 8px; display: block; text-transform: uppercase; }
-    .apple-input, .apple-select, .apple-textarea {
-      width: 100%; border: 1px solid #d2d2d7; border-radius: 8px; padding: 10px 14px;
-      font-size: 14px; color: #1d1d1f; background-color: #f5f5f7; outline: none;
-      transition: all 0.2s ease; box-sizing: border-box; line-height: 1.4;
-    }
-    .apple-input:focus, .apple-select:focus, .apple-textarea:focus {
-      border-color: #007aff; background-color: #ffffff; box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
-    }
-    .apple-textarea { resize: vertical; min-height: 90px; }
-    .input-hint { font-size: 12px; color: #a1a1a6; margin-top: 5px; font-weight: 500; }
+    .apple-input, .apple-select, .apple-textarea { width: 100%; border: 1px solid #d2d2d7; border-radius: 8px; padding: 10px 14px; font-size: 14px; color: #1d1d1f; background-color: #f5f5f7; outline: none; transition: all 0.2s ease; box-sizing: border-box; }
+    .apple-input:focus, .apple-select:focus, .apple-textarea:focus { border-color: #007aff; background-color: #ffffff; box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15); }
+    .apple-textarea { min-height: 65px; resize: vertical; }
     .form-row { display: flex; gap: 20px; }
     .form-col { flex: 1; }
-    .id-badge { font-family: monospace; font-size: 12px; background: #f2f2f7; padding: 4px 8px; border-radius: 6px; color: #86868b; display: inline-block; margin-bottom: 15px; }
+
+    .tree-picker-wrapper { border: 1px solid #d2d2d7; border-radius: 8px; background: #fafafa; padding: 10px; height: 160px; overflow-y: auto; }
+    .id-bar { font-family: monospace; font-size: 12px; color: #86868b; margin-bottom: -5px; }
+
+    /* ==================== 核心新增：层级内顺序可视化调整车间样式 ==================== */
+    .sorting-sandbox { border: 1px solid #e5e5ea; border-radius: 8px; background: #fbfbfd; padding: 12px; max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+    .sort-peer-card { display: flex; align-items: center; justify-content: space-between; background: #ffffff; border: 1px solid #d2d2d7; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: grab; transition: all 0.2s; }
+    .sort-peer-card:active { cursor: grabbing; transform: scale(0.99); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .sort-peer-card.is-self { border-color: #007aff; background: #f0f8ff; font-weight: 600; color: #007aff; border-width: 2px; }
+    .sort-peer-card.dragover { border-top: 2px solid #34c759; }
+    .drag-handle { color: #c7c7cc; cursor: grab; margin-right: 8px; font-size: 14px; }
+    .peer-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; }
+    .peer-order-badge { font-family: monospace; font-size: 11px; background: #e5e5ea; padding: 2px 6px; border-radius: 4px; color: #86868b; }
   </style>
 </head>
 <body>
-<div class="form-container">
-  <div class="id-badge">RULE_ID: <span th:text="${rule.ruleId}"></span></div>
+<div class="workshop-container">
+  <div class="id-bar">目标实体锚点流水号: <span th:text="${rule.ruleId}"></span></div>
 
   <form class="form-horizontal" id="form-rule-edit" th:object="${rule}">
-    <input type="hidden" name="ruleId" th:field="*{ruleId}"/>
-    <input type="hidden" name="qzh" th:field="*{qzh}"/>
-    <input type="hidden" name="parentId" th:field="*{parentId}"/>
+    <input type="hidden" id="ruleId" name="ruleId" th:field="*{ruleId}"/>
+    <input type="hidden" id="qzh" name="qzh" th:field="*{qzh}"/>
+    <input type="hidden" id="targetParentId" name="parentId" th:field="*{parentId}"/>
+    <input type="hidden" id="originalIsLeaf" th:value="*{retentionPeriod != null and retentionPeriod != ''}"/>
+
+    <input type="hidden" id="finalSortOrder" name="sortOrder" th:field="*{sortOrder}"/>
 
     <div class="form-row">
       <div class="form-col">
         <div class="apple-form-group">
           <label class="apple-label">归属档案门类</label>
-          <select name="categoryCode" class="apple-select" required>
+          <select id="categorySelect" name="categoryCode" class="apple-select" onchange="loadTargetFolderTree()" required>
             <option value="WS" th:field="*{categoryCode}">文书档案 (WS)</option>
             <option value="KJ" th:field="*{categoryCode}">科技档案 (KJ)</option>
             <option value="SW" th:field="*{categoryCode}">实物档案 (SW)</option>
@@ -47,55 +56,228 @@
       <div class="form-col">
         <div class="apple-form-group">
           <label class="apple-label">法定保管期限</label>
-          <select name="retentionPeriod" class="apple-select">
+          <select id="periodSelect" name="retentionPeriod" class="apple-select" onchange="handlePeriodMutex()">
             <option value="永久" th:field="*{retentionPeriod}">永久</option>
             <option value="30年" th:field="*{retentionPeriod}">30年</option>
             <option value="10年" th:field="*{retentionPeriod}">10年</option>
-            <option value="" th:field="*{retentionPeriod}">[无期限/纯结构目录]</option>
+            <option value="" th:field="*{retentionPeriod}">[退化为无期限非叶子节点]</option>
           </select>
         </div>
       </div>
     </div>
 
-    <div class="form-row">
-      <div class="form-col" style="flex: 0 0 160px;">
-        <div class="apple-form-group">
-          <label class="apple-label">条款编号</label>
-          <input type="text" name="clauseNo" class="apple-input" th:field="*{clauseNo}"/>
-        </div>
-      </div>
-      <div class="form-col">
-        <div class="apple-form-group">
-          <label class="apple-label">物理显示顺位</label>
-          <input type="number" name="sortOrder" class="apple-input" th:field="*{sortOrder}" required/>
-        </div>
-      </div>
-    </div>
-
     <div class="apple-form-group">
-      <label class="apple-label">上级血缘追溯前缀</label>
-      <input type="text" name="parentPathText" class="apple-input" th:field="*{parentPathText}"/>
-      <div class="input-hint">完整还原的树形血缘，直接决定右侧大盘与 TOC 边栏的级联呈现形态</div>
+      <label class="apple-label">条款编号</label>
+      <input type="text" name="clauseNo" class="apple-input" th:field="*{clauseNo}" placeholder="如: (一) 或 1.1"/>
     </div>
 
     <div class="apple-form-group">
       <label class="apple-label">条款核心内容正文</label>
       <textarea name="clauseText" class="apple-textarea" th:field="*{clauseText}" required></textarea>
     </div>
+
+    <div class="apple-form-group">
+      <label class="apple-label" style="color: #34c759;">层级结构调整 (挂载目标非叶子节点容器)</label>
+      <div class="tree-picker-wrapper">
+        <ul id="folderTree" class="ztree"></ul>
+      </div>
+      <span style="font-size: 12px; color: #86868b; margin-top: 4px; display: block;">
+                * 点击切换归属父节点。系统将自动刷新下方的层级内顺序沙盒。
+            </span>
+    </div>
+
+    <div class="apple-form-group">
+      <label class="apple-label" style="color: #007aff;">层级内顺序调整 (上下拖动目标卡片排序)</label>
+      <div class="sorting-sandbox" id="peerSandbox">
+        <div style="text-align: center; color: #a1a1a6; font-size: 12px; padding: 20px;">
+          <i class="fa fa-spinner fa-spin"></i> 正在智能嗅探同级同袍兄弟条款...
+        </div>
+      </div>
+    </div>
   </form>
 </div>
 
 <th:block th:include="include :: footer" />
+<th:block th:include="include :: ztree-js" />
 <script th:inline="javascript">
   var prefix = ctx + "system/rule";
-  $("#form-rule-edit").validate({ focusCleanup: true });
+  var activeTreeObj = null;
+  var cachedPeers = []; // 当前父节点下的直系兄弟缓存集
+
+  $(function() {
+    loadTargetFolderTree();
+    handlePeriodMutex();
+  });
+
+  function handlePeriodMutex() {
+    var currentPeriod = $("#periodSelect").val();
+    var origIsLeaf = $("#originalIsLeaf").val() === "true";
+    if (origIsLeaf && currentPeriod === "") {
+      $.modal.msgWarning("您正在清除期限，保存后该叶子将转变为可挂载子项的目录容器");
+    }
+  }
 
   /**
-   * 🧠 安全级更新推送通道
+   * 🧠 动态联动引擎：拉取目录大盘
+   */
+  function loadTargetFolderTree() {
+    var targetCat = $("#categorySelect").val();
+    var qzh = $("#qzh").val();
+    var currentRuleId = $("#ruleId").val();
+
+    var setting = {
+      view: { showLine: true, selectedMulti: false },
+      data: { key: { title: "name" }, simpleData: { enable: true, idKey: "ruleId", pIdKey: "parentId", rootPId: "0" } },
+      callback: {
+        onClick: function(e, treeId, node) {
+          $("#targetParentId").val(node.ruleId);
+          // 💡 联动核心：切换父级后，立刻拉取新父级下的兄弟群体重绘排序车间
+          fetchAndRenderPeers(node.ruleId);
+        }
+      }
+    };
+
+    $.post(prefix + "/folderTree", { qzh: qzh, categoryCode: targetCat, excludeRuleId: currentRuleId }, function(res) {
+      if (res.code == 0) {
+        var treeNodes = res.data || [];
+        treeNodes.push({ ruleId: "0", parentId: "-1", clauseText: "【独立放置到顶级业务门类大纲】", name: "【独立放置到顶级业务门类大纲】", open: true });
+
+        treeNodes.forEach(function(item){
+          item.name = (item.clauseNo ? item.clauseNo + " " : "") + item.clauseText;
+        });
+
+        activeTreeObj = $.fn.zTree.init($("#folderTree"), setting, treeNodes);
+        activeTreeObj.expandAll(true);
+
+        var initialParentId = $("#targetParentId").val() || "0";
+        var targetNode = activeTreeObj.getNodeByParam("ruleId", initialParentId, null);
+        if (targetNode) {
+          activeTreeObj.selectNode(targetNode);
+        }
+        // 初始化渲染当前所处层级的顺位沙盒
+        fetchAndRenderPeers(initialParentId);
+      }
+    });
+  }
+
+  /**
+   * 🚀 核心攻坚：动态拉取指定父级下的所有子条款，渲染可视化拖拽沙盒
+   */
+  function fetchAndRenderPeers(parentId) {
+    var qzh = $("#qzh").val();
+    var targetCat = $("#categorySelect").val();
+    var currentRuleId = $("#ruleId").val();
+
+    // 调度后台标准列表查询获取该父节点下的所有孩子
+    $.post(prefix + "/list", { qzh: qzh, categoryCode: targetCat, parentId: parentId, pageNum: 1, pageSize: 500 }, function(res) {
+      var $sandbox = $("#peerSandbox").empty();
+      if (res.code == 0) {
+        cachedPeers = res.rows || [];
+
+        // 确保自身实体也混排在队列中以供调整位置
+        var selfExists = cachedPeers.some(function(p){ return p.ruleId === currentRuleId; });
+        if (!selfExists) {
+          // 如果是跨分类移动过来尚不在库里，构造虚拟自我快照插入末尾
+          var selfTitle = $("textarea[name='clauseText']").val() || "【当前正在编辑的条款自身】";
+          var selfNo = $("input[name='clauseNo']").val() || "";
+          cachedPeers.push({ ruleId: currentRuleId, clauseNo: selfNo, clauseText: selfTitle, sortOrder: 9999, isSelf: true });
+        }
+
+        // 严格按现有的 sortOrder 进行正向初始排序
+        cachedPeers.sort(function(a,b){ return a.sortOrder - b.sortOrder; });
+
+        cachedPeers.forEach(function(p, idx) {
+          var isSelf = p.ruleId === currentRuleId || p.isSelf;
+          var cardClass = isSelf ? "sort-peer-card is-self" : "sort-peer-card";
+          var displayTitle = (p.clauseNo ? p.clauseNo + " " : "") + p.clauseText;
+
+          var html = '<div class="' + cardClass + '" draggable="true" data-rule-id="' + p.ruleId + '" data-index="' + idx + '">' +
+                  '  <div style="display:flex; align-items:center; min-width:0; flex:1;">' +
+                  '    <i class="fa fa-bars drag-handle"></i>' +
+                  '    <span class="peer-text" title="' + displayTitle + '">' + displayTitle + '</span>' +
+                  '  </div>' +
+                  '  <span class="peer-order-badge">顺位: <b class="order-val">' + ((idx + 1) * 10) + '</b></span>' +
+                  '</div>';
+          $sandbox.append(html);
+        });
+
+        // 绑定拖拽微调事件驱动
+        bindSandboxDragEvents();
+        // 隐式刷新当前算出的最终自我顺位
+        syncFinalSortOrder();
+      } else {
+        $sandbox.html('<div style="color:#ff3b30; font-size:12px;">拉取同袍数据断链</div>');
+      }
+    });
+  }
+
+  /**
+   * 绑定沙盒容器内卡片的 H5 拖拽互换逻辑
+   */
+  function bindSandboxDragEvents() {
+    var draggedEl = null;
+    var $cards = $(".sort-peer-card");
+
+    $cards.on("dragstart", function(e) {
+      draggedEl = this;
+      e.originalEvent.dataTransfer.effectAllowed = 'move';
+      $(this).css("opacity", "0.4");
+    });
+
+    $cards.on("dragend", function(e) {
+      $(this).css("opacity", "1");
+      $cards.removeClass("dragover");
+    });
+
+    $cards.on("dragover", function(e) {
+      e.preventDefault();
+      e.originalEvent.dataTransfer.dropEffect = 'move';
+      if (this !== draggedEl) { $(this).addClass("dragover"); }
+    });
+
+    $cards.on("dragleave", function(e) {
+      $(this).removeClass("dragover");
+    });
+
+    $cards.on("drop", function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (draggedEl && this !== draggedEl) {
+        // 执行 DOM 顺位对调或插队重排
+        $(this).before(draggedEl);
+        $cards.removeClass("dragover");
+
+        // 💡 视觉同步结束，立刻重新计算全排列物理顺位值
+        syncFinalSortOrder();
+      }
+    });
+  }
+
+  /**
+   * 遍历重算顺位值，按步长 10 依次沉淀写入隐藏域
+   */
+  function syncFinalSortOrder() {
+    var currentRuleId = $("#ruleId").val();
+    $(".sort-peer-card").each(function(idx) {
+      var calculatedOrder = (idx + 1) * 10;
+      $(this).find(".order-val").text(calculatedOrder);
+
+      // 如果是当前条款自身，立刻反写进底层提交参数中
+      if ($(this).attr("data-rule-id") === currentRuleId) {
+        $("#finalSortOrder").val(calculatedOrder);
+      }
+    });
+  }
+
+  /**
+   * 终极安全递交通道
    */
   function submitHandler() {
     if ($.validate.form()) {
-      $.modal.loading("正在更新云端知识库...");
+      // 确保提交前拿到最新计算的顺位
+      syncFinalSortOrder();
+
+      $.modal.loading("正在安全合并顺位图谱...");
       $.ajax({
         url: prefix + "/edit",
         type: "POST",
@@ -103,17 +285,12 @@
         success: function(result) {
           $.modal.closeLoading();
           if (result.code == 0 || result.code == 200) {
-            $.modal.msgSuccess("更新生效完毕！");
-            // 调度主页面静默重绘
+            $.modal.msgSuccess("图谱血缘保存成功！");
             parent.loadRuleData();
             setTimeout(function(){ $.modal.close(); }, 1000);
           } else {
-            $.modal.msgError(result.msg || "修改合并遭遇意外拦截");
+            $.modal.msgError(result.msg || "树形合并冲突拦截");
           }
-        },
-        error: function() {
-          $.modal.closeLoading();
-          $.modal.msgError("网络断链或服务器内部宕机");
         }
       });
     }

@@ -8,7 +8,11 @@ import com.ruoyi.framework.web.page.TableDataInfo;
 import com.ruoyi.common.utils.security.ShiroUtils; // 若依单机版标准用户上下文工具
 import com.ruoyi.project.system.rule.domain.ArchiveAppraisalRule;
 import com.ruoyi.project.system.rule.service.IArchiveAppraisalRuleService;
+
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.ruoyi.project.system.titansort.service.IArchiveCategoryService;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
@@ -58,6 +62,7 @@ public class ArchiveAppraisalRuleController extends BaseController {
             String createBy = ShiroUtils.getLoginName();
             // 启动后端全自动游标路由引擎
             int rows = ruleService.importRuleDocument(unitId, file, createBy);
+            ruleService.startAsyncBatchLlmEnhancement(unitId, "");
             return AjaxResult.success("解析大满贯！系统已自动分拣并为您构建了 " + rows + " 条具备树形血缘关系的立体规则节点。");
         } catch (Exception e) {
             return AjaxResult.error("导入失败: " + e.getMessage());
@@ -139,5 +144,74 @@ public class ArchiveAppraisalRuleController extends BaseController {
         rule.setFullMergedText(fullMerged);
 
         return toAjax(ruleService.updateArchiveAppraisalRule(rule));
+    }
+
+    /**
+     * 专属支撑：为编辑界面的“层级结构调整”框提供目标门类下纯净的【非叶子节点树】
+     * 强过滤条件：retention_period 必须为空（纯结构目录）
+     */
+    @PostMapping("/folderTree")
+    @ResponseBody
+    public AjaxResult folderTree(@RequestParam("qzh") String qzh,
+                                 @RequestParam("categoryCode") String categoryCode,
+                                 @RequestParam(value = "excludeRuleId", required = false) String excludeRuleId) {
+        ArchiveAppraisalRule param = new ArchiveAppraisalRule();
+        param.setQzh(qzh);
+        param.setCategoryCode(categoryCode);
+        // 调度 Service 查询大盘数据
+        List<ArchiveAppraisalRule> allRules = ruleService.selectRuleList(param);
+
+        // 内存级清洗：仅保留非叶子节点，且物理剔除当前正在编辑的节点及其下属分支以防死循环
+        List<ArchiveAppraisalRule> pureFolders = new ArrayList<>();
+        Set<String> invalidIds = new HashSet<>();
+        if (StringUtils.isNotEmpty(excludeRuleId)) {
+            invalidIds.add(excludeRuleId);
+            // 找出所有直系子孙ID存入黑名单
+            collectDescendantIds(allRules, excludeRuleId, invalidIds);
+        }
+
+        for (ArchiveAppraisalRule r : allRules) {
+            boolean isFolder = StringUtils.isEmpty(r.getRetentionPeriod());
+            if (isFolder && !invalidIds.contains(r.getRuleId())) {
+                pureFolders.add(r);
+            }
+        }
+        return AjaxResult.success(pureFolders);
+    }
+
+    /** 辅助递归搜集失效子孙ID */
+    private void collectDescendantIds(List<ArchiveAppraisalRule> list, String parentId, Set<String> ids) {
+        for (ArchiveAppraisalRule r : list) {
+            if (parentId.equals(r.getParentId())) {
+                ids.add(r.getRuleId());
+                collectDescendantIds(list, r.getRuleId(), ids);
+            }
+        }
+    }
+
+    /**
+     * 1. 响应前端大盘右上角实时轮询进度的诉求
+     */
+    @PostMapping("/enhancementProgress")
+    @ResponseBody
+    public AjaxResult enhancementProgress(@RequestParam("qzh") String qzh,
+                                          @RequestParam("categoryCode") String categoryCode) {
+        return AjaxResult.success(ruleService.getBatchEnhancementProgress(qzh, categoryCode));
+    }
+
+
+    /**
+     * 手动触发批量 AI 语义浓缩（用于调用失败数据的重试或断点续传）
+     */
+    @PostMapping("/batchEnhance")
+    @ResponseBody
+    public AjaxResult batchEnhance(@RequestParam("qzh") String qzh,
+                                   @RequestParam(value = "categoryCode", required = false) String categoryCode) {
+        if (StringUtils.isEmpty(qzh)) {
+            return AjaxResult.error("请先选择目标归属单位");
+        }
+        // 启动后台大模型异步消费线程池进行重试提取
+        ruleService.startAsyncBatchLlmEnhancement(qzh, StringUtils.trimToEmpty(categoryCode));
+        return AjaxResult.success("增强重试指令已下发！后台正为您静默提炼未浓缩的语义特征。");
     }
 }

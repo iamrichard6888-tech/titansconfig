@@ -1,5 +1,6 @@
 package com.ruoyi.project.system.rule.service.impl;
 
+import com.alibaba.fastjson.JSONObject;
 import com.ruoyi.common.utils.uuid.UUID;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.common.utils.text.Convert; // ✅ 修复了报错的导包
@@ -26,9 +27,11 @@ import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.apache.poi.xwpf.usermodel.XWPFTableCell;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.ruoyi.project.system.rule.utils.MindIEClient;
 
 @Service
 public class ArchiveAppraisalRuleServiceImpl implements IArchiveAppraisalRuleService {
@@ -37,6 +40,9 @@ public class ArchiveAppraisalRuleServiceImpl implements IArchiveAppraisalRuleSer
     private ArchiveAppraisalRuleMapper ruleMapper;
     @Autowired
     private ArchiveCategoryMapper archiveCategoryMapper;
+
+    @Autowired
+    private MindIEClient mindIEClient;
 
     // 识别末尾各种括号内的法定保管期限：如 (永久), （30年）, 永久, 10年 等
     private static final Pattern RETENTION_PATTERN = Pattern.compile("[(（]?\\s*(永久|\\d+年)\\s*[)）]?$");
@@ -410,5 +416,97 @@ public class ArchiveAppraisalRuleServiceImpl implements IArchiveAppraisalRuleSer
     public int updateArchiveAppraisalRule(ArchiveAppraisalRule rule) {
         // 若依标准单表动态更新透传 (仅更新非空字段)
         return ruleMapper.updateArchiveAppraisalRule(rule);
+    }
+
+    /**
+     * 🚀 阶段二：开启全异步消费通道，静默浓缩提取语义特征
+     */
+    @Async // 挂载进后台批处理线程池，释放前台调用链
+    @Override
+    public void startAsyncBatchLlmEnhancement(String qzh, String categoryCode) {
+        // 抓取该门类下所有处于代码原生拆解态 (process_status = 0) 的条款
+        ArchiveAppraisalRule param = new ArchiveAppraisalRule();
+        param.setQzh(qzh);
+        param.setCategoryCode(categoryCode);
+        param.setProcessStatus(0);
+        List<ArchiveAppraisalRule> pendingRules = ruleMapper.selectRuleList(param);
+
+        for (ArchiveAppraisalRule r : pendingRules) {
+            // 如果是纯结构目录，直接标记为人工核验态跳过大模型消耗
+            if (StringUtils.isEmpty(r.getRetentionPeriod())) {
+                r.setProcessStatus(2);
+                ruleMapper.updateArchiveAppraisalRule(r);
+                continue;
+            }
+
+            long start = System.currentTimeMillis();
+            boolean success = false;
+            String errorMsg = "";
+
+            // 建立防线：允许短时重试 1 次补偿网络抖动
+            for (int retry = 0; retry < 2; retry++) {
+                try {
+                    // 🚀 终极对齐：将层级血脉与正文双轨同时灌入引擎
+                    JSONObject aiMeta = mindIEClient.enhanceRuleMetadata(r.getParentPathText(), r.getClauseText());
+
+                    if (aiMeta != null) {
+                        String docType = aiMeta.getString("文种");
+                        String eventKey = aiMeta.getString("事由");
+
+                        r.setDocumentTypes(StringUtils.isNotEmpty(docType) ? docType : "综合材料");
+                        r.setEventKeywords(StringUtils.isNotEmpty(eventKey) ? eventKey : r.getClauseText());
+                        r.setProcessStatus(1); // 稳健标记为 AI 增强完毕态
+                        r.setAiCostTimeMs(System.currentTimeMillis() - start);
+                        r.setAiErrorLog("");
+
+                        // 确保同步维持大盘全景联合载荷更新
+                        String fullMerged = StringUtils.isEmpty(r.getParentPathText()) ? r.getClauseText()
+                                : r.getParentPathText() + " / " + r.getClauseText();
+                        r.setFullMergedText(fullMerged);
+
+                        ruleMapper.updateArchiveAppraisalRule(r);
+                        success = true;
+                        break;
+                    }
+                } catch (Exception e) {
+                    errorMsg = e.getMessage();
+                    try { Thread.sleep(500); } catch (InterruptedException ignored) {} // 短暂缓冲避让
+                }
+            }
+
+            // 记录特例异常，绝不卡死下游消费
+            if (!success) {
+                r.setAiErrorLog("AI解析异常: " + errorMsg);
+                ruleMapper.updateArchiveAppraisalRule(r);
+            }
+        }
+    }
+
+    /**
+     * 📊 为前端 image_bd4c5a.png 提供实时处理进度大盘数据
+     */
+    @Override
+    public Map<String, Object> getBatchEnhancementProgress(String qzh, String categoryCode) {
+        Map<String, Object> progress = new HashMap<>();
+        ArchiveAppraisalRule param = new ArchiveAppraisalRule();
+        param.setQzh(qzh);
+        param.setCategoryCode(categoryCode);
+
+        List<ArchiveAppraisalRule> all = ruleMapper.selectRuleList(param);
+        long total = all.size();
+        long completed = 0;
+        long failed = 0;
+
+        for (ArchiveAppraisalRule r : all) {
+            // processStatus 大于 0 代表已度过原始代码态
+            if (r.getProcessStatus() != null && r.getProcessStatus() > 0) completed++;
+            if (StringUtils.isNotEmpty(r.getAiErrorLog())) failed++;
+        }
+
+        progress.put("total", total);
+        progress.put("completed", completed);
+        progress.put("failed", failed);
+        progress.put("percent", total > 0 ? (int) ((completed * 100) / total) : 100);
+        return progress;
     }
 }
