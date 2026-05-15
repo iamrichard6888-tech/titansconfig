@@ -33,7 +33,17 @@ server:
       max: 800
       # Tomcat启动初始化的线程数，默认值10
       min-spare: 100
- 
+
+bge:
+  #ollama mindie
+  api-mode: ollama
+  #ollama /api/embed
+  #mindie /embed
+  api-url: http://127.0.0.1:8045/api/embed
+  #黄埔现场 quentinz/bge-large-zh-v1.5:latest
+  #自己调试 quentinz/bge-large-zh-v1.5
+  model-name: quentinz/bge-large-zh-v1.5
+
 # 日志配置
 logging:
   level:

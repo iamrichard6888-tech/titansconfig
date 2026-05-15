@@ -13,6 +13,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.ruoyi.project.system.rule.service.MilvusRuleService;
+import com.ruoyi.project.system.rule.utils.BgeEmbeddingClient;
 import com.ruoyi.project.system.titansort.domain.ArchiveCategory;
 import com.ruoyi.project.system.titansort.mapper.ArchiveCategoryMapper;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -43,6 +45,12 @@ public class ArchiveAppraisalRuleServiceImpl implements IArchiveAppraisalRuleSer
 
     @Autowired
     private MindIEClient mindIEClient;
+
+    @Autowired
+    private BgeEmbeddingClient bgeClient;
+
+    @Autowired
+    private MilvusRuleService milvusRuleService;
 
     // 识别末尾各种括号内的法定保管期限：如 (永久), （30年）, 永久, 10年 等
     private static final Pattern RETENTION_PATTERN = Pattern.compile("[(（]?\\s*(永久|\\d+年)\\s*[)）]?$");
@@ -465,6 +473,13 @@ public class ArchiveAppraisalRuleServiceImpl implements IArchiveAppraisalRuleSer
                         r.setFullMergedText(fullMerged);
 
                         ruleMapper.updateArchiveAppraisalRule(r);
+                        // ==========================================
+                        // 🚀 阶段三新增魔法：实时向量化并沉淀至 Milvus 库！
+                        // 提取的优质 eventKey 组合上下文生成最高密度的特征表示
+                        // ==========================================
+                        String embedText = "文种：" + docType + "，事由：" + eventKey + "，业务归属：" + r.getParentPathText();
+                        List<Float> vector = bgeClient.getEmbedding(embedText);
+                        milvusRuleService.upsertRuleVector(r.getRuleId(), r.getCategoryCode(), vector);
                         success = true;
                         break;
                     }

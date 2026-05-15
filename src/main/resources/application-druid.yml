@@ -11,15 +11,15 @@ spring:
                 #url: jdbc:mysql://localhost:3306/ry?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
                 #username: root
                 #password: 123456
-                url: jdbc:dm://172.23.237.76:5236/
-                username: DIGITAL_HPDAG_DAXT
-                password: Admin@123
+#                url: jdbc:dm://172.23.237.76:5236/
+#                username: DIGITAL_HPDAG_DAXT
+#                password: Admin@123
 #                 url: jdbc:dm://192.168.1.11:5236/
 #                 username: HPZWWDAS
 #                 password: Admin@123
-#                 url: jdbc:dm://192.168.1.19:5236/SYSDBA?schema=DIGITAL_HPDAG_DAXT
-#                 username: SYSDBA
-#                 password: Admin@123
+                 url: jdbc:dm://192.168.1.19:5236/SYSDBA?schema=DIGITAL_HPDAG_DAXT
+                 username: SYSDBA
+                 password: Admin@123
 #                 url: jdbc:dm://172.23.237.76:5236/SYSDBA?schema=HPQSXDA
 #                 username: SYSDBA
 #                 password: Admin@123
@@ -33,12 +33,12 @@ spring:
             slave:
                 # 从数据源开关/默认关闭
                 enabled: true
-#                url: jdbc:dm://192.168.1.19:5236/SYSDBA?schema=HPZWWSZSEC
-#                username: SYSDBA
-#                password: Admin@123
-                url: jdbc:dm://172.23.237.76:5236/
-                username: HPZWWSZSEC
+                url: jdbc:dm://192.168.1.19:5236/SYSDBA?schema=HPZWWSZSEC
+                username: SYSDBA
                 password: Admin@123
+#                url: jdbc:dm://172.23.237.76:5236/
+#                username: HPZWWSZSEC
+#                password: Admin@123
 #                url: jdbc:dm://192.168.1.11:5236/
 #                username: HPZWWSZSEC
 #                password: Admin@123

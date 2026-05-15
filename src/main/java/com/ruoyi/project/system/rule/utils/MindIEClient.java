@@ -16,13 +16,13 @@ import java.util.regex.Pattern;
 @Component
 public class MindIEClient {
 
-    @Value("${mindie.api-url:http://172.23.16.126:80/v1/chat/completions}")
+    @Value("${mindie.api-url:http://127.0.0.1:8045/v1/chat/completions}")
     private String apiUrl;
 
     @Value("${mindie.api-key:sk-c149638004e04ecc85b9f35abe0db78e}") // 鉴权配置保留
     private String apiKey;
 
-    @Value("${mindie.model-name:qwen}")
+    @Value("${mindie.model-name:gemini-3-flash}")
     private String modelName;
 
     private final RestTemplate restTemplate = new RestTemplate();
