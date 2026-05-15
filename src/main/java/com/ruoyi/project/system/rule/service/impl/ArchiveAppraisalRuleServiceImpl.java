@@ -430,7 +430,7 @@ public class ArchiveAppraisalRuleServiceImpl implements IArchiveAppraisalRuleSer
         param.setCategoryCode(categoryCode);
         param.setProcessStatus(0);
         List<ArchiveAppraisalRule> pendingRules = ruleMapper.selectRuleList(param);
-
+        System.out.println("本次提交给ai的条目："+pendingRules.size());
         for (ArchiveAppraisalRule r : pendingRules) {
             // 如果是纯结构目录，直接标记为人工核验态跳过大模型消耗
             if (StringUtils.isEmpty(r.getRetentionPeriod())) {

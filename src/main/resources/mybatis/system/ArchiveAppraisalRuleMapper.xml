@@ -5,7 +5,7 @@
 <mapper namespace="com.ruoyi.project.system.rule.mapper.ArchiveAppraisalRuleMapper">
 
     <resultMap type="ArchiveAppraisalRule" id="ArchiveAppraisalRuleResult">
-        <id     property="ruleId"          column="rule_id"          />
+        <result property="ruleId"          column="rule_id"          />
         <result property="qzh"             column="qzh"              />
         <result property="categoryCode"    column="category_code"    />
         <result property="parentId"        column="parent_id"        />
@@ -18,6 +18,8 @@
         <result property="eventKeywords"   column="event_keywords"   />
         <result property="processStatus"   column="process_status"   />
         <result property="sortOrder"       column="sort_order"       />
+        <result property="aiCostTimeMs"    column="ai_cost_time_ms"  />
+        <result property="aiErrorLog"      column="ai_error_log"     />
         <result property="createBy"        column="create_by"        />
         <result property="createTime"      column="create_time"      />
         <result property="updateBy"        column="update_by"        />
@@ -27,8 +29,8 @@
     <sql id="selectRuleVo">
         select rule_id, qzh, category_code, parent_id, clause_no, parent_path_text,
                clause_text, full_merged_text, retention_period, document_types,
-               event_keywords, process_status, sort_order, create_by, create_time,
-               update_by, update_time
+               event_keywords, process_status, sort_order, ai_cost_time_ms, ai_error_log,
+               create_by, create_time, update_by, update_time
         from archive_appraisal_rule
     </sql>
 
@@ -39,6 +41,7 @@
             <if test="categoryCode != null and categoryCode != ''"> and category_code = #{categoryCode}</if>
             <if test="parentId != null and parentId != ''"> and parent_id = #{parentId}</if>
             <if test="retentionPeriod != null and retentionPeriod != ''"> and retention_period = #{retentionPeriod}</if>
+            <if test="processStatus != null "> and process_status = #{processStatus}</if>
             <if test="params.keyword != null and params.keyword != ''">
                 and (clause_text like concat('%', #{params.keyword}, '%')
                 or full_merged_text like concat('%', #{params.keyword}, '%'))
@@ -81,41 +84,15 @@
 
     <insert id="insertArchiveAppraisalRule" parameterType="ArchiveAppraisalRule">
         insert into archive_appraisal_rule (
-            rule_id,
-            qzh,
-            category_code,
-            parent_id,
-            clause_no,
-            parent_path_text,
-            clause_text,
-            full_merged_text,
-            retention_period,
-            document_types,
-            event_keywords,
-            process_status,
-            sort_order,
-            create_by,
-            create_time,
-            update_by,
-            update_time
+            rule_id, qzh, category_code, parent_id, clause_no, parent_path_text,
+            clause_text, full_merged_text, retention_period, document_types,
+            event_keywords, process_status, sort_order, ai_cost_time_ms, ai_error_log,
+            create_by, create_time, update_by, update_time
         ) values (
-                     #{ruleId},
-                     #{qzh},
-                     #{categoryCode},
-                     #{parentId},
-                     #{clauseNo},
-                     #{parentPathText},
-                     #{clauseText},
-                     #{fullMergedText},
-                     #{retentionPeriod},
-                     #{documentTypes},
-                     #{eventKeywords},
-                     #{processStatus},
-                     #{sortOrder},
-                     #{createBy},
-                     sysdate(),
-                     #{updateBy},
-                     sysdate()
+                     #{ruleId}, #{qzh}, #{categoryCode}, #{parentId}, #{clauseNo}, #{parentPathText},
+                     #{clauseText}, #{fullMergedText}, #{retentionPeriod}, #{documentTypes},
+                     #{eventKeywords}, #{processStatus}, #{sortOrder}, #{aiCostTimeMs}, #{aiErrorLog},
+                     #{createBy}, sysdate(), #{updateBy}, sysdate()
                  )
     </insert>
 
@@ -123,8 +100,8 @@
         update archive_appraisal_rule
         <trim prefix="SET" suffixOverrides=",">
             <if test="qzh != null and qzh != ''">qzh = #{qzh},</if>
-            <if test="categoryCode != null and categoryCode != ''">category_code = #{categoryCode},</if>
-            <if test="parentId != null and parentId != ''">parent_id = #{parentId},</if>
+            <if test="categoryCode != null">category_code = #{categoryCode},</if>
+            <if test="parentId != null">parent_id = #{parentId},</if>
             <if test="clauseNo != null">clause_no = #{clauseNo},</if>
             <if test="parentPathText != null">parent_path_text = #{parentPathText},</if>
             <if test="clauseText != null and clauseText != ''">clause_text = #{clauseText},</if>
@@ -134,7 +111,9 @@
             <if test="eventKeywords != null">event_keywords = #{eventKeywords},</if>
             <if test="processStatus != null">process_status = #{processStatus},</if>
             <if test="sortOrder != null">sort_order = #{sortOrder},</if>
-            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            <if test="aiCostTimeMs != null">ai_cost_time_ms = #{aiCostTimeMs},</if>
+            <if test="aiErrorLog != null">ai_error_log = #{aiErrorLog},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
             update_time = sysdate()
         </trim>
         where rule_id = #{ruleId}

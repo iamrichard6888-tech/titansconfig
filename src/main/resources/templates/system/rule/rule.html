@@ -80,13 +80,13 @@
     .group-header-l3 { font-size: 16px; color: #86868b; font-weight: 600; margin-top: 20px; }
     .apple-list-group { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); overflow: hidden; }
 
-    /* 主内容区卡片样式 */
+    /* 主内容区卡片标准形态保护 */
     .apple-list-item { display: flex; align-items: flex-start; padding: 18px 20px; border-bottom: 1px solid #f2f2f7; transition: background 0.2s; }
     .apple-list-item:last-child { border-bottom: none; }
     .apple-list-item:hover { background: #fbfbfd; }
     .item-clause { font-size: 14px; font-weight: 700; color: #007aff; width: 65px; flex-shrink: 0; padding-top: 2px; }
     .item-content { flex: 1; padding-right: 25px; min-width: 0; }
-    .item-title { font-size: 15px; color: #1d1d1f; margin-bottom: 6px; font-weight: 600; line-height: 1.4; word-break: break-all; }
+    .item-title { font-size: 15px; color: #1d1d1f; margin-bottom: 4px; font-weight: 600; line-height: 1.4; word-break: break-all; }
     .item-action { display: flex; align-items: center; gap: 15px; flex-shrink: 0; }
     .apple-badge { padding: 4px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; text-align: center; width: 65px; }
     .badge-forever { background: #ffeceb; color: #ff3b30; }
@@ -98,6 +98,13 @@
     .empty-state p { font-size: 14px; font-weight: 500; }
     .rule-lineage-path { font-size: 12px; color: #a1a1a6; margin-bottom: 5px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
     .rule-lineage-path i { font-size: 10px; color: #c7c7cc; }
+
+    /* ==================== 💡 核心注入：AI 成果展现与异常追溯视觉轨道 ==================== */
+    .ai-meta-box { margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .ai-tag { background: rgba(0, 122, 255, 0.06); color: #007aff; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid rgba(0, 122, 255, 0.1); display: inline-flex; align-items: center; gap: 3px; }
+    .ai-tag-type { background: #f5f5f7; color: #86868b; border-color: transparent; }
+    .ai-cost-tag { font-family: monospace; font-size: 11px; color: #a1a1a6; margin-left: 4px; }
+    .ai-error-bar { margin-top: 6px; background: #ffeceb; border-left: 3px solid #ff3b30; padding: 4px 10px; border-radius: 0 6px 6px 0; font-size: 12px; color: #ff3b30; font-weight: 500; display: flex; align-items: center; gap: 6px; }
 
     /* 聚合操作菜单定制 */
     .btn-dropdown-trigger { background: #f2f2f7; color: #007aff; border: none; padding: 6px 14px; border-radius: 14px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; }
@@ -319,7 +326,6 @@
     progressTimer = setInterval(pollAction, 3000);
   }
 
-  /** 💡 新增驱动：手动触发遗漏或失败数据的 AI 语义增强重试 */
   function triggerBatchEnhance() {
     if (!currentDeptId) {
       $.modal.msgWarning("请先在左侧选择要处理的目标单位");
@@ -329,7 +335,7 @@
       $.post(prefix + "/batchEnhance", { qzh: currentDeptId, categoryCode: currentCategory }, function(res) {
         if (res.code == 0 || res.code == 200) {
           $.modal.msgSuccess(res.msg);
-          startAiProgressPolling(); // 立即快抽并重启监听大盘
+          startAiProgressPolling();
         } else {
           $.modal.msgError(res.msg || "重试指令下发失败");
         }
@@ -394,9 +400,13 @@
     bindTocEvents();
   }
 
+  /**
+   * 🎨 终极全能渲染机制：完美融合 AI 提炼成果展示与异常追溯栏
+   */
   function buildCleanRowItem(r, depthCut) {
     var isFolder = !r.retentionPeriod || r.retentionPeriod.trim() === "";
     var badgeHtml = isFolder ? '' : (r.retentionPeriod == '永久' ? '<span class="apple-badge badge-forever">永久</span>' : (r.retentionPeriod == '30年' ? '<span class="apple-badge badge-30y">30年</span>' : '<span class="apple-badge badge-10y">' + r.retentionPeriod + '</span>'));
+
     var subPathLineage = "";
     if (r.parentPathText && r.parentPathText.trim() !== "") {
       var trailingPaths = r.parentPathText.split("/").slice(depthCut + 1).map(function(p){ return p.trim(); }).filter(Boolean);
@@ -407,9 +417,28 @@
     var appendChildBtn = isFolder ? '<button onclick="openAddChild(\'' + r.ruleId + '\', \'' + r.categoryCode + '\')"><i class="fa fa-level-down"></i> 添加子项</button>' : '';
     var cardAnchorAttr = r.tocAnchorId ? ' id="' + r.tocAnchorId + '"' : '';
 
+    // ==================== 💡 视觉成果注入：精准透出底层算力流转状态 ====================
+    var aiMetaHtml = "";
+    // 场景 1: 大模型处理异常产生报错记录，渲染红色追溯栏
+    if (r.aiErrorLog && r.aiErrorLog.trim() !== "") {
+      aiMetaHtml = '<div class="ai-error-bar"><i class="fa fa-exclamation-circle"></i> ' + r.aiErrorLog + '</div>';
+    }
+    // 场景 2: 增强提炼完成 (processStatus == 1)，高光呈现文种、事由短语与消耗毫秒数
+    else if (r.processStatus === 1) {
+      var safeTypes = r.documentTypes ? r.documentTypes : "未明文种";
+      var safeEvents = r.eventKeywords ? r.eventKeywords : "语义待核";
+      var costDisplay = r.aiCostTimeMs ? '<span class="ai-cost-tag"><i class="fa fa-flash"></i> ' + r.aiCostTimeMs + 'ms</span>' : '';
+
+      aiMetaHtml = '<div class="ai-meta-box">' +
+              '  <span class="ai-tag ai-tag-type"><i class="fa fa-tag"></i> ' + safeTypes + '</span>' +
+              '  <span class="ai-tag"><i class="fa fa-cube"></i> ' + safeEvents + '</span>' +
+              costDisplay +
+              '</div>';
+    }
+
     return '<div class="apple-list-item"' + cardAnchorAttr + '>' +
             '  <div class="item-clause">' + clauseDisplay + '</div>' +
-            '  <div class="item-content">' + subPathLineage + '<div class="item-title">' + r.clauseText + '</div></div>' +
+            '  <div class="item-content">' + subPathLineage + '<div class="item-title">' + r.clauseText + '</div>' + aiMetaHtml + '</div>' +
             '  <div class="item-action">' + badgeHtml +
             '    <div class="dropdown-action-wrapper"><button class="btn-dropdown-trigger">操作 <i class="fa fa-angle-down"></i></button>' +
             '      <div class="apple-action-menu">' + appendChildBtn +

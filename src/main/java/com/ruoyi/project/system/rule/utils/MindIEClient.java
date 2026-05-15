@@ -16,13 +16,13 @@ import java.util.regex.Pattern;
 @Component
 public class MindIEClient {
 
-    @Value("${mindie.api-url:https://onlineai.cc/v1/chat/completions}")
+    @Value("${mindie.api-url:http://172.23.16.126:80/v1/chat/completions}")
     private String apiUrl;
 
-    @Value("${mindie.api-key:sk-6iRhVcYyRvbMcEvh0zJlZLQNL9kEJZx9Qt8oR3un9BbsJUOn}") // 鉴权配置保留
+    @Value("${mindie.api-key:sk-c149638004e04ecc85b9f35abe0db78e}") // 鉴权配置保留
     private String apiKey;
 
-    @Value("${mindie.model-name:gpt-5.5}")
+    @Value("${mindie.model-name:qwen}")
     private String modelName;
 
     private final RestTemplate restTemplate = new RestTemplate();
@@ -46,7 +46,8 @@ public class MindIEClient {
                 "【输出强制规范】：\n" +
                 "1. 必须仅输出合法的JSON对象或JSON数组，绝对不要包含任何解释性文字或Markdown外壳。\n" +
                 "2. 提取的JSON键名严格固定为 \"事由\" 和 \"文种\"。\n" +
-                "3. 若条款正文包含多项不同性质的条目，请输出JSON数组格式分别提取；若内容紧密单一，输出单个JSON对象。";
+                "3. 若条款正文包含多项不同性质的条目，请将它们全部放入【同一个】JSON数组格式中输出；若内容紧密单一，输出单个JSON对象。\n" +
+                "4. 绝对禁止在输出的数组或对象外部拼接任何其他内容！";
 
         // 拼接带有前因后果的用户载荷
         String cleanPath = StringUtils.isNotEmpty(parentPathText) ? parentPathText.trim() : "独立基础业务";
@@ -61,6 +62,7 @@ public class MindIEClient {
         messages.add(createMsg("system", systemPrompt));
         messages.add(createMsg("user", userPromptPayload));
         payload.put("messages", messages);
+        System.out.println(JSON.toJSONString("===request=="+payload));
 
         try {
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
